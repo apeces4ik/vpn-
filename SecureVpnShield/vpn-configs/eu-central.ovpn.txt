@@ -1,0 +1,24 @@
+client
+dev tun
+proto udp
+remote vpn-eu-central.securevpn.com 1194
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+comp-lzo
+verb 3
+cipher AES-256-CBC
+auth SHA256
+
+<ca>
+# CA certificate goes here
+</ca>
+
+<cert>
+# Client certificate goes here
+</cert>
+
+<key>
+# Client private key goes here
+</key>
