@@ -2,6 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --primary: #00ff41;
+  --primary-dark: #10b981;
+  --primary-light: #34d399;
+  --bg-primary: #000000;
+  --bg-secondary: #0a0f0a;
+  --bg-card: #0f1410;
+  --text-primary: #ffffff;
+  --text-secondary: #9ca3af;
+  --border: rgba(0, 255, 65, 0.1);
+  --success: #00ff41;
+  --error: #ef4444;
+  --warning: #f59e0b;
+}
+
 body {
     margin: 0;
     font-family:
@@ -10,6 +25,8 @@ body {
         sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background: var(--bg-primary);
+    color: var(--text-primary);
 }
 
 code {
