@@ -329,6 +329,16 @@ const Dashboard = ({ user }) => {
                       >
                         <Download size={16} />
                       </button>
+                      {userPlan && (
+                        <button 
+                          className="btn btn-accent btn-sm"
+                          onClick={() => handleAdvancedConnect(server)}
+                          data-testid={`advanced-btn-${index}`}
+                          title="Advanced Features"
+                        >
+                          <Settings size={16} />
+                        </button>
+                      )}
                     </>
                   )}
                 </div>
