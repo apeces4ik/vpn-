@@ -1521,6 +1521,551 @@ async def get_advanced_features():
         "total_features": 4
     }
 
+# ============= CORPORATE API ENDPOINTS =============
+
+# Organization Management
+
+@api_router.post("/organizations")
+async def create_organization(
+    name: str,
+    owner_email: EmailStr,
+    plan_id: str,
+    max_team_members: int = 10
+):
+    """Create a new corporate organization"""
+    try:
+        # Verify plan exists
+        plan = await db.tariff_plans.find_one({"id": plan_id}, {"_id": 0})
+        if not plan:
+            raise HTTPException(status_code=404, detail="Plan not found")
+        
+        # Create organization
+        org = Organization(
+            name=name,
+            owner_email=owner_email,
+            plan_id=plan_id,
+            max_team_members=max_team_members,
+            plan_expires_at=datetime.now(timezone.utc) + timedelta(days=365)
+        )
+        
+        doc = org.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        doc['updated_at'] = doc['updated_at'].isoformat()
+        if doc.get('plan_expires_at'):
+            doc['plan_expires_at'] = doc['plan_expires_at'].isoformat()
+        
+        await db.organizations.insert_one(doc)
+        
+        # Create owner user
+        owner_user = User(
+            email=owner_email,
+            current_plan_id=plan_id,
+            organization_id=org.id,
+            plan_expires_at=org.plan_expires_at
+        )
+        
+        user_doc = owner_user.model_dump()
+        user_doc['created_at'] = user_doc['created_at'].isoformat()
+        if user_doc.get('plan_expires_at'):
+            user_doc['plan_expires_at'] = user_doc['plan_expires_at'].isoformat()
+        
+        await db.users.insert_one(user_doc)
+        
+        # Create team member record for owner
+        team_member = TeamMember(
+            organization_id=org.id,
+            user_id=owner_user.id,
+            email=owner_email,
+            role="owner"
+        )
+        
+        member_doc = team_member.model_dump()
+        member_doc['joined_at'] = member_doc['joined_at'].isoformat()
+        
+        await db.team_members.insert_one(member_doc)
+        
+        logger.info(f"Created organization: {org.id} for {owner_email}")
+        
+        return {
+            "organization_id": org.id,
+            "owner_user_id": owner_user.id,
+            "message": "Organization created successfully"
+        }
+    
+    except Exception as e:
+        logger.error(f"Error creating organization: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/organizations/{org_id}")
+async def get_organization(org_id: str):
+    """Get organization details"""
+    org = await db.organizations.find_one({"id": org_id}, {"_id": 0})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    # Convert ISO strings back to datetime for response
+    if isinstance(org.get('created_at'), str):
+        org['created_at'] = datetime.fromisoformat(org['created_at'])
+    if isinstance(org.get('updated_at'), str):
+        org['updated_at'] = datetime.fromisoformat(org['updated_at'])
+    if isinstance(org.get('plan_expires_at'), str):
+        org['plan_expires_at'] = datetime.fromisoformat(org['plan_expires_at'])
+    
+    # Get team members count
+    members_count = await db.team_members.count_documents({"organization_id": org_id, "is_active": True})
+    org['current_team_members'] = members_count
+    
+    return org
+
+@api_router.put("/organizations/{org_id}")
+async def update_organization(
+    org_id: str,
+    name: Optional[str] = None,
+    max_team_members: Optional[int] = None,
+    branding: Optional[Dict[str, Any]] = None
+):
+    """Update organization details"""
+    org = await db.organizations.find_one({"id": org_id})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    
+    if name:
+        update_data["name"] = name
+    if max_team_members is not None:
+        update_data["max_team_members"] = max_team_members
+    if branding is not None:
+        update_data["branding"] = branding
+    
+    await db.organizations.update_one(
+        {"id": org_id},
+        {"$set": update_data}
+    )
+    
+    return {"message": "Organization updated successfully"}
+
+# Team Member Management
+
+@api_router.post("/organizations/{org_id}/members")
+async def add_team_member(
+    org_id: str,
+    email: EmailStr,
+    role: str = "member"
+):
+    """Add a team member to organization"""
+    # Verify organization exists
+    org = await db.organizations.find_one({"id": org_id}, {"_id": 0})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    # Check team size limit
+    current_members = await db.team_members.count_documents({
+        "organization_id": org_id,
+        "is_active": True
+    })
+    
+    if current_members >= org.get('max_team_members', 10):
+        raise HTTPException(status_code=400, detail="Team member limit reached")
+    
+    # Check if user already exists
+    existing_user = await db.users.find_one({"email": email}, {"_id": 0})
+    
+    if existing_user:
+        user_id = existing_user['id']
+        # Update user with organization
+        await db.users.update_one(
+            {"id": user_id},
+            {"$set": {
+                "organization_id": org_id,
+                "current_plan_id": org.get('plan_id'),
+                "plan_expires_at": org.get('plan_expires_at')
+            }}
+        )
+    else:
+        # Create new user
+        new_user = User(
+            email=email,
+            current_plan_id=org.get('plan_id'),
+            organization_id=org_id,
+            plan_expires_at=datetime.fromisoformat(org.get('plan_expires_at')) if isinstance(org.get('plan_expires_at'), str) else org.get('plan_expires_at')
+        )
+        
+        user_doc = new_user.model_dump()
+        user_doc['created_at'] = user_doc['created_at'].isoformat()
+        if user_doc.get('plan_expires_at'):
+            user_doc['plan_expires_at'] = user_doc['plan_expires_at'].isoformat()
+        
+        await db.users.insert_one(user_doc)
+        user_id = new_user.id
+    
+    # Create team member record
+    team_member = TeamMember(
+        organization_id=org_id,
+        user_id=user_id,
+        email=email,
+        role=role
+    )
+    
+    member_doc = team_member.model_dump()
+    member_doc['joined_at'] = member_doc['joined_at'].isoformat()
+    
+    await db.team_members.insert_one(member_doc)
+    
+    # Log security event
+    security_event = SecurityEvent(
+        organization_id=org_id,
+        user_id=user_id,
+        event_type="member_added",
+        severity="info",
+        description=f"Team member {email} added with role {role}"
+    )
+    event_doc = security_event.model_dump()
+    event_doc['created_at'] = event_doc['created_at'].isoformat()
+    await db.security_events.insert_one(event_doc)
+    
+    return {
+        "user_id": user_id,
+        "message": "Team member added successfully"
+    }
+
+@api_router.get("/organizations/{org_id}/members")
+async def get_team_members(org_id: str):
+    """Get all team members of an organization"""
+    members = await db.team_members.find(
+        {"organization_id": org_id, "is_active": True},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    for member in members:
+        if isinstance(member.get('joined_at'), str):
+            member['joined_at'] = datetime.fromisoformat(member['joined_at'])
+        if isinstance(member.get('last_active'), str):
+            member['last_active'] = datetime.fromisoformat(member['last_active'])
+    
+    return {"members": members, "total": len(members)}
+
+@api_router.put("/organizations/{org_id}/members/{member_id}")
+async def update_team_member(
+    org_id: str,
+    member_id: str,
+    role: Optional[str] = None,
+    is_active: Optional[bool] = None
+):
+    """Update team member role or status"""
+    update_data = {}
+    
+    if role:
+        if role not in ["owner", "admin", "manager", "member"]:
+            raise HTTPException(status_code=400, detail="Invalid role")
+        update_data["role"] = role
+    
+    if is_active is not None:
+        update_data["is_active"] = is_active
+    
+    result = await db.team_members.update_one(
+        {"id": member_id, "organization_id": org_id},
+        {"$set": update_data}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Team member not found")
+    
+    return {"message": "Team member updated successfully"}
+
+@api_router.delete("/organizations/{org_id}/members/{member_id}")
+async def remove_team_member(org_id: str, member_id: str):
+    """Remove a team member from organization"""
+    member = await db.team_members.find_one({"id": member_id, "organization_id": org_id})
+    
+    if not member:
+        raise HTTPException(status_code=404, detail="Team member not found")
+    
+    if member.get('role') == 'owner':
+        raise HTTPException(status_code=400, detail="Cannot remove organization owner")
+    
+    # Deactivate team member
+    await db.team_members.update_one(
+        {"id": member_id},
+        {"$set": {"is_active": False}}
+    )
+    
+    # Update user
+    await db.users.update_one(
+        {"id": member.get('user_id')},
+        {"$set": {
+            "organization_id": None,
+            "current_plan_id": None,
+            "plan_expires_at": None
+        }}
+    )
+    
+    return {"message": "Team member removed successfully"}
+
+# Security Monitoring
+
+@api_router.get("/organizations/{org_id}/security/events")
+async def get_security_events(
+    org_id: str,
+    limit: int = 100,
+    severity: Optional[str] = None
+):
+    """Get security events for organization"""
+    query = {"organization_id": org_id}
+    
+    if severity:
+        query["severity"] = severity
+    
+    events = await db.security_events.find(
+        query,
+        {"_id": 0}
+    ).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    for event in events:
+        if isinstance(event.get('created_at'), str):
+            event['created_at'] = datetime.fromisoformat(event['created_at'])
+    
+    return {"events": events, "total": len(events)}
+
+@api_router.get("/organizations/{org_id}/dashboard")
+async def get_team_dashboard(org_id: str):
+    """Get team dashboard data with security monitoring"""
+    # Get organization
+    org = await db.organizations.find_one({"id": org_id}, {"_id": 0})
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    # Get active team members
+    active_members = await db.team_members.count_documents({
+        "organization_id": org_id,
+        "is_active": True
+    })
+    
+    # Get active connections
+    active_connections = await db.connections.count_documents({
+        "is_active": True,
+        "user_id": {"$in": [
+            member['user_id'] for member in await db.team_members.find(
+                {"organization_id": org_id, "is_active": True},
+                {"user_id": 1, "_id": 0}
+            ).to_list(1000)
+        ]}
+    })
+    
+    # Get recent security events
+    recent_events = await db.security_events.find(
+        {"organization_id": org_id},
+        {"_id": 0}
+    ).sort("created_at", -1).limit(10).to_list(10)
+    
+    for event in recent_events:
+        if isinstance(event.get('created_at'), str):
+            event['created_at'] = datetime.fromisoformat(event['created_at'])
+    
+    # Get total data usage
+    total_data = org.get('total_data_used', 0)
+    
+    # Get security summary
+    critical_events = await db.security_events.count_documents({
+        "organization_id": org_id,
+        "severity": "critical",
+        "created_at": {"$gte": (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()}
+    })
+    
+    warning_events = await db.security_events.count_documents({
+        "organization_id": org_id,
+        "severity": "warning",
+        "created_at": {"$gte": (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()}
+    })
+    
+    return {
+        "organization": org,
+        "stats": {
+            "active_members": active_members,
+            "max_members": org.get('max_team_members', 10),
+            "active_connections": active_connections,
+            "total_data_used_gb": round(total_data / (1024**3), 2),
+            "plan_expires_at": org.get('plan_expires_at')
+        },
+        "security": {
+            "critical_events_7d": critical_events,
+            "warning_events_7d": warning_events,
+            "recent_events": recent_events
+        }
+    }
+
+# Partner API
+
+@api_router.post("/partner/api-keys")
+async def create_partner_api_key(
+    partner_name: str,
+    allowed_operations: List[str] = ["create_user", "manage_subscription"],
+    rate_limit: int = 1000
+):
+    """Create a new partner API key"""
+    api_key_obj = PartnerAPIKey(
+        partner_name=partner_name,
+        allowed_operations=allowed_operations,
+        rate_limit=rate_limit,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=365)
+    )
+    
+    doc = api_key_obj.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    if doc.get('expires_at'):
+        doc['expires_at'] = doc['expires_at'].isoformat()
+    
+    await db.partner_api_keys.insert_one(doc)
+    
+    return {
+        "api_key": api_key_obj.api_key,
+        "secret_key": api_key_obj.secret_key,
+        "partner_name": partner_name,
+        "message": "Partner API key created successfully. Store these keys securely."
+    }
+
+async def verify_partner_api_key(api_key: str, secret_key: str) -> Optional[Dict]:
+    """Verify partner API key and secret"""
+    key_doc = await db.partner_api_keys.find_one({
+        "api_key": api_key,
+        "secret_key": secret_key,
+        "is_active": True
+    }, {"_id": 0})
+    
+    if not key_doc:
+        return None
+    
+    # Check expiration
+    if key_doc.get('expires_at'):
+        expires_at = datetime.fromisoformat(key_doc['expires_at']) if isinstance(key_doc['expires_at'], str) else key_doc['expires_at']
+        if expires_at < datetime.now(timezone.utc):
+            return None
+    
+    # Check rate limit
+    if key_doc.get('last_request_at'):
+        last_request = datetime.fromisoformat(key_doc['last_request_at']) if isinstance(key_doc['last_request_at'], str) else key_doc['last_request_at']
+        if (datetime.now(timezone.utc) - last_request).total_seconds() < 3600:
+            if key_doc.get('requests_count', 0) >= key_doc.get('rate_limit', 1000):
+                return None
+        else:
+            # Reset counter after an hour
+            await db.partner_api_keys.update_one(
+                {"api_key": api_key},
+                {"$set": {"requests_count": 0}}
+            )
+            key_doc['requests_count'] = 0
+    
+    # Increment request count
+    await db.partner_api_keys.update_one(
+        {"api_key": api_key},
+        {
+            "$inc": {"requests_count": 1},
+            "$set": {"last_request_at": datetime.now(timezone.utc).isoformat()}
+        }
+    )
+    
+    return key_doc
+
+@api_router.post("/partner/users")
+async def partner_create_user(
+    api_key: str,
+    secret_key: str,
+    email: EmailStr,
+    plan_id: str,
+    plan_duration_days: int = 30
+):
+    """Partner API: Create a new user with subscription"""
+    # Verify API key
+    key_doc = await verify_partner_api_key(api_key, secret_key)
+    if not key_doc:
+        raise HTTPException(status_code=401, detail="Invalid or expired API key")
+    
+    if "create_user" not in key_doc.get('allowed_operations', []):
+        raise HTTPException(status_code=403, detail="Operation not allowed")
+    
+    # Verify plan exists
+    plan = await db.tariff_plans.find_one({"id": plan_id}, {"_id": 0})
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    
+    # Create user
+    user = User(
+        email=email,
+        current_plan_id=plan_id,
+        plan_expires_at=datetime.now(timezone.utc) + timedelta(days=plan_duration_days)
+    )
+    
+    user_doc = user.model_dump()
+    user_doc['created_at'] = user_doc['created_at'].isoformat()
+    if user_doc.get('plan_expires_at'):
+        user_doc['plan_expires_at'] = user_doc['plan_expires_at'].isoformat()
+    
+    await db.users.insert_one(user_doc)
+    
+    logger.info(f"Partner {key_doc['partner_name']} created user: {user.id}")
+    
+    return {
+        "user_id": user.id,
+        "anonymous_id": user.anonymous_id,
+        "email": email,
+        "plan_id": plan_id,
+        "plan_expires_at": user.plan_expires_at.isoformat(),
+        "message": "User created successfully"
+    }
+
+@api_router.put("/partner/users/{user_id}/subscription")
+async def partner_update_subscription(
+    user_id: str,
+    api_key: str,
+    secret_key: str,
+    plan_id: Optional[str] = None,
+    extend_days: Optional[int] = None
+):
+    """Partner API: Update user subscription"""
+    # Verify API key
+    key_doc = await verify_partner_api_key(api_key, secret_key)
+    if not key_doc:
+        raise HTTPException(status_code=401, detail="Invalid or expired API key")
+    
+    if "manage_subscription" not in key_doc.get('allowed_operations', []):
+        raise HTTPException(status_code=403, detail="Operation not allowed")
+    
+    # Get user
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    update_data = {}
+    
+    if plan_id:
+        # Verify plan exists
+        plan = await db.tariff_plans.find_one({"id": plan_id}, {"_id": 0})
+        if not plan:
+            raise HTTPException(status_code=404, detail="Plan not found")
+        update_data["current_plan_id"] = plan_id
+    
+    if extend_days:
+        current_expiry = user.get('plan_expires_at')
+        if isinstance(current_expiry, str):
+            current_expiry = datetime.fromisoformat(current_expiry)
+        
+        if current_expiry and current_expiry > datetime.now(timezone.utc):
+            new_expiry = current_expiry + timedelta(days=extend_days)
+        else:
+            new_expiry = datetime.now(timezone.utc) + timedelta(days=extend_days)
+        
+        update_data["plan_expires_at"] = new_expiry.isoformat()
+    
+    if update_data:
+        await db.users.update_one(
+            {"id": user_id},
+            {"$set": update_data}
+        )
+    
+    logger.info(f"Partner {key_doc['partner_name']} updated subscription for user: {user_id}")
+    
+    return {"message": "Subscription updated successfully"}
+
 # Include router
 app.include_router(api_router)
 
