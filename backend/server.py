@@ -287,10 +287,8 @@ async def get_tariffs():
 
 @api_router.post("/tariffs/init")
 async def init_tariffs():
-    # Check if tariffs already exist
-    existing = await db.tariff_plans.count_documents({})
-    if existing > 0:
-        return {"message": "Tariffs already initialized"}
+    # Clear existing tariffs
+    await db.tariff_plans.delete_many({})
     
     default_tariffs = [
         TariffPlan(
@@ -327,7 +325,8 @@ async def init_tariffs():
         doc['created_at'] = doc['created_at'].isoformat()
         await db.tariff_plans.insert_one(doc)
     
-    return {"message": f"Initialized {len(default_tariffs)} tariff plans"}
+    return {"message": f"Initialized {len(default_tariffs)} tariff plans (updated prices)"}
+
 
 # VPN Servers Routes
 @api_router.get("/servers", response_model=List[VPNServer])
