@@ -143,6 +143,65 @@ class Connection(BaseModel):
     enable_tor: bool = False
     split_tunnel_rules: List[SplitTunnelRule] = []
 
+# ============= CORPORATE MODELS =============
+
+class Organization(BaseModel):
+    """Corporate account for multi-user management"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    owner_email: EmailStr
+    plan_id: str  # Corporate plan
+    plan_expires_at: Optional[datetime] = None
+    max_team_members: int = 10  # Based on plan
+    total_data_used: int = 0
+    is_active: bool = True
+    # White-label branding
+    branding: Optional[Dict[str, Any]] = None  # logo_url, primary_color, secondary_color, custom_domain
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class TeamMember(BaseModel):
+    """Member of an organization with role-based access"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    organization_id: str
+    user_id: str  # Links to User
+    email: EmailStr
+    role: str = "member"  # owner, admin, manager, member
+    is_active: bool = True
+    joined_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    last_active: Optional[datetime] = None
+
+class PartnerAPIKey(BaseModel):
+    """API key for partners to manage users and subscriptions"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    partner_name: str
+    api_key: str = Field(default_factory=lambda: secrets.token_urlsafe(32))
+    secret_key: str = Field(default_factory=lambda: secrets.token_urlsafe(64))
+    is_active: bool = True
+    allowed_operations: List[str] = ["create_user", "manage_subscription"]  # Operations allowed
+    rate_limit: int = 1000  # Requests per hour
+    requests_count: int = 0
+    last_request_at: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    expires_at: Optional[datetime] = None
+
+class SecurityEvent(BaseModel):
+    """Security monitoring event for Team Dashboard"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    organization_id: Optional[str] = None
+    user_id: str
+    event_type: str  # login, connection, disconnection, suspicious_activity, data_breach_attempt
+    severity: str = "info"  # info, warning, critical
+    description: str
+    ip_address: Optional[str] = None
+    location: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 # ============= NOWPAYMENTS CLIENT =============
 
 class NOWPaymentsClient:
