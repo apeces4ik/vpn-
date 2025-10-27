@@ -6,6 +6,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
+from vpn_provider_integration import get_vpn_provider
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from pydantic_settings import BaseSettings
 from typing import List, Optional, Dict, Any
