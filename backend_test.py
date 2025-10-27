@@ -249,7 +249,7 @@ class AnonVPNTester:
             "device_name": "Test Device"
         }
         
-        success, data = await self.make_request('POST', '/connections/connect', json=connection_data)
+        success, data = await self.make_request('POST', '/connections/connect', params=connection_data)
         
         # This might fail due to no active subscription, which is expected
         if success and data.get('id'):
