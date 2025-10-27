@@ -1559,7 +1559,7 @@ class AnonVPNTester:
             "allowed_operations": ["create_user", "manage_subscription"]
         }
         
-        success, data = await self.make_request('POST', '/partner/api-keys', json=partner_data)
+        success, data = await self.make_request('POST', '/partner/api-keys', params=partner_data)
         
         if success and data.get('api_key') and data.get('secret_key'):
             api_key = data['api_key']
