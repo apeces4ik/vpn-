@@ -98,6 +98,7 @@ class User(BaseModel):
     plan_expires_at: Optional[datetime] = None
     total_data_used: int = 0
     devices: List[Dict[str, Any]] = []
+    organization_id: Optional[str] = None  # Links to Organization for corporate users
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_seen: Optional[datetime] = None
 
