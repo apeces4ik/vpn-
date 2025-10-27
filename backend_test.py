@@ -1300,7 +1300,7 @@ class AnonVPNTester:
             "max_team_members": 10
         }
         
-        success, data = await self.make_request('POST', '/organizations', json=org_data)
+        success, data = await self.make_request('POST', '/organizations', params=org_data)
         
         if success and data.get('id'):
             org_id = data['id']
