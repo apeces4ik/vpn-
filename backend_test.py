@@ -700,6 +700,7 @@ async def main():
     """Run all backend tests"""
     print("🚀 Starting AnonVPN Enterprise Backend API Tests")
     print(f"Backend URL: {BACKEND_URL}")
+    print("🎯 Focus: Enhanced Payment Error Handling Testing")
     
     async with AnonVPNTester() as tester:
         # Run tests in logical order
@@ -708,9 +709,18 @@ async def main():
         await tester.test_servers_initialization()
         await tester.test_user_management()
         await tester.test_nowpayments_integration()
+        
+        # NEW: Test enhanced payment error handling features
+        await tester.test_minimum_amount_endpoint()
+        await tester.test_enhanced_payment_error_handling()
+        await tester.test_error_message_quality()
+        
+        # Original payment tests
         await tester.test_payment_creation()
         await tester.test_payment_status_monitoring()
         await tester.test_webhook_handler()
+        
+        # VPN functionality tests
         await tester.test_vpn_connection()
         await tester.test_vpn_config_generation()
         await tester.test_statistics_endpoints()
