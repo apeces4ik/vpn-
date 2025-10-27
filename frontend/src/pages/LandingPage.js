@@ -145,10 +145,12 @@ const LandingPage = ({ user, createUser }) => {
           </div>
           
           <h1 className="hero-title" data-testid="hero-title">
-            <span className="hero-title-line">Your Privacy,</span>
+            <span className="hero-title-line">
+              <TypingEffect text="Your Privacy," delay={100} />
+            </span>
             <br />
-            <span className="gradient-text">
-              <TypingEffect text="Absolutely Anonymous" delay={120} />
+            <span className="gradient-text-bright">
+              <TypingEffect text="Absolutely Anonymous" delay={100} />
             </span>
           </h1>
           
