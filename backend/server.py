@@ -29,9 +29,11 @@ class Settings(BaseSettings):
     nowpayments_api_key: str = os.environ.get('NOWPAYMENTS_API_KEY', 'demo_key')
     nowpayments_ipn_secret: str = os.environ.get('NOWPAYMENTS_IPN_SECRET', 'demo_secret')
     nowpayments_sandbox_mode: bool = os.environ.get('NOWPAYMENTS_SANDBOX_MODE', 'True').lower() == 'true'
+    backend_url: str = os.environ.get('BACKEND_URL', 'http://localhost:8001')
     
     class Config:
         env_file = '.env'
+        extra = 'ignore'
 
 settings = Settings()
 
