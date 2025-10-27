@@ -1,5 +1,7 @@
 .landing-page {
   min-height: 100vh;
+  background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(16, 185, 129, 0.08) 0%, transparent 50%), 
+              linear-gradient(180deg, #0a0a0b 0%, #111113 100%);
 }
 
 /* Navigation */
@@ -12,6 +14,18 @@
   background: rgba(10, 10, 11, 0.8);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
+  animation: slideDown 0.5s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .nav-container {
@@ -31,6 +45,25 @@
   font-size: 24px;
   font-weight: 700;
   font-family: 'Space Grotesk', sans-serif;
+  transition: transform 0.3s ease;
+}
+
+.logo:hover {
+  transform: scale(1.05);
+}
+
+.logo svg {
+  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.5));
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
 }
 
 .logo-text {
