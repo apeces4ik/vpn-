@@ -159,12 +159,19 @@ const PaymentPage = ({ user, setUser }) => {
             </div>
 
             <div className="payment-qr" data-testid="payment-qr">
-              <QRCodeSVG 
-                value={payment.pay_address || ''} 
-                size={200}
-                level="H"
-                includeMargin={true}
-              />
+              <a 
+                href={`${payment.pay_currency}:${payment.pay_address}?amount=${payment.pay_amount}`}
+                className="qr-link"
+                data-testid="qr-deeplink"
+              >
+                <QRCodeSVG 
+                  value={`${payment.pay_currency}:${payment.pay_address}?amount=${payment.pay_amount}`}
+                  size={200}
+                  level="H"
+                  includeMargin={true}
+                />
+                <div className="qr-hint">Click to open wallet</div>
+              </a>
             </div>
 
             <div className="payment-info">
