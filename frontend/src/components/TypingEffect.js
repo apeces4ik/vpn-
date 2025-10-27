@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import './TypingEffect.css';
 
-const TypingEffect = ({ text, delay = 100, className = '' }) => {
+const TypingEffect = ({ text, delay = 150, className = '' }) => {
   const [displayedText, setDisplayedText] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [showCursor, setShowCursor] = useState(true);
 
   useEffect(() => {
     if (currentIndex < text.length) {
@@ -13,13 +14,19 @@ const TypingEffect = ({ text, delay = 100, className = '' }) => {
       }, delay);
 
       return () => clearTimeout(timeout);
+    } else {
+      // Blink cursor when done typing
+      const cursorInterval = setInterval(() => {
+        setShowCursor(prev => !prev);
+      }, 530);
+      return () => clearInterval(cursorInterval);
     }
   }, [currentIndex, text, delay]);
 
   return (
     <span className={`typing-effect ${className}`}>
       {displayedText}
-      {currentIndex < text.length && <span className="typing-cursor">|</span>}
+      {showCursor && <span className="typing-cursor">|</span>}
     </span>
   );
 };
