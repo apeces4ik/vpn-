@@ -1052,14 +1052,14 @@ class AnonVPNTester:
             "user_id": self.test_data['user_id'],
             "server_id": self.test_data['server_id'],
             "device_name": "Combo Test Device",
-            "enable_double_vpn": True,
+            "enable_double_vpn": "true",
             "exit_server_id": self.test_data['server_id'],
             "split_tunnel_rules": [
                 {"type": "domain", "value": "example.com", "action": "bypass"}
             ]
         }
         
-        success, data = await self.make_request('POST', '/connections/advanced', params=combo_data)
+        success, data = await self.make_request('POST', '/connections/advanced', json=combo_data)
         
         if success and data.get('connection'):
             connection = data['connection']
