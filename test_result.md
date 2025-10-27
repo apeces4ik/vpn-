@@ -963,18 +963,12 @@ metadata:
   production_ready: true
 
 test_plan:
-  current_focus:
-    - "Double VPN Feature"
-    - "Obfuscation (obfs4) Feature"
-    - "Tor-over-VPN Integration"
-    - "Split Tunneling Feature"
-    - "Advanced Connection API Endpoint"
-    - "Advanced Config Download Endpoint"
-    - "Advanced Features Info Endpoint"
-    - "Server Filtering Endpoints"
+  current_focus: []
   stuck_tasks: []
-  test_all: false
-  test_priority: "high_first"
+  test_all: true
+  test_priority: "completed"
+  advanced_features_complete: true
+  comprehensive_testing_done: true
 
 agent_communication:
   - agent: "main"
