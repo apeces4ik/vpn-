@@ -803,6 +803,38 @@ async def get_vpn_config(connection_id: str, protocol: str = "wireguard"):
         logger.error(f"Failed to generate config: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate configuration: {str(e)}")
 
+@api_router.get("/protocols")
+async def get_supported_protocols():
+    """Get list of supported VPN protocols"""
+    return {
+        "protocols": [
+            {
+                "name": "WireGuard",
+                "id": "wireguard",
+                "description": "Modern, fast, and secure VPN protocol",
+                "performance": "Excellent",
+                "compatibility": "Windows, macOS, Linux, iOS, Android",
+                "recommended": True
+            },
+            {
+                "name": "OpenVPN",
+                "id": "openvpn",
+                "description": "Industry standard VPN protocol",
+                "performance": "Good",
+                "compatibility": "All platforms",
+                "recommended": False
+            },
+            {
+                "name": "IKEv2/IPSec",
+                "id": "ikev2",
+                "description": "Fast and stable, especially on mobile",
+                "performance": "Very Good",
+                "compatibility": "iOS, macOS, Windows",
+                "recommended": False
+            }
+        ]
+    }
+
 # Statistics Routes
 @api_router.get("/stats/overview")
 async def get_overview_stats():
