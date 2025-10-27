@@ -551,7 +551,7 @@ async def create_payment(
         logger.error(f"Unexpected error creating payment: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to create payment. Please try a different cryptocurrency or contact support."
+            detail="Failed to create payment. Please try a different cryptocurrency or contact support."
         )
 
 @api_router.get("/payments/{payment_id}", response_model=Payment)
