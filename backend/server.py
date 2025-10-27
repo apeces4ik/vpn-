@@ -736,41 +736,72 @@ async def get_user_connections(user_id: str, active_only: bool = True):
 
 # Config generation route
 @api_router.get("/connections/{connection_id}/config")
-async def get_vpn_config(connection_id: str):
+async def get_vpn_config(connection_id: str, protocol: str = "wireguard"):
+    """Generate VPN configuration file
+    
+    Supported protocols:
+    - wireguard (default)
+    - openvpn
+    - ikev2
+    """
     connection = await db.connections.find_one({"id": connection_id})
     if not connection:
         raise HTTPException(status_code=404, detail="Connection not found")
+    
+    if not connection.get('is_active', False):
+        raise HTTPException(status_code=400, detail="Connection is not active")
     
     server = await db.vpn_servers.find_one({"id": connection['server_id']})
     if not server:
         raise HTTPException(status_code=404, detail="Server not found")
     
     user = await db.users.find_one({"id": connection['user_id']})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
     
-    # Generate WireGuard config
-    config = f"""[Interface]
-PrivateKey = {secrets.token_hex(32)}
-Address = 10.0.0.2/32
-DNS = 1.1.1.1, 8.8.8.8
-
-[Peer]
-PublicKey = {secrets.token_hex(32)}
-Endpoint = {server['ipv4_address']}:51820
-AllowedIPs = 0.0.0.0/0
-PersistentKeepalive = 25
-
-# AnonVPN Enterprise
-# Server: {server['location']} ({server['country_code']})
-# User: {user.get('anonymous_id', 'unknown')}
-# Generated: {datetime.now(timezone.utc).isoformat()}
-"""
+    protocol = protocol.lower()
     
-    # Return as downloadable file
-    return StreamingResponse(
-        io.StringIO(config),
-        media_type="text/plain",
-        headers={"Content-Disposition": f"attachment; filename=anonvpn-{server['location'].lower().replace(' ', '-')}.conf"}
-    )
+    try:
+        if protocol == "wireguard":
+            config_data = vpn_config_generator.generate_wireguard_config(
+                server_ip=server['ipv4_address'],
+                server_location=server['location'],
+                server_country=server['country_code'],
+                user_id=user['id'],
+                connection_id=connection_id
+            )
+        elif protocol == "openvpn":
+            config_data = vpn_config_generator.generate_openvpn_config(
+                server_ip=server['ipv4_address'],
+                server_location=server['location'],
+                server_country=server['country_code'],
+                user_id=user['id'],
+                connection_id=connection_id
+            )
+        elif protocol == "ikev2":
+            config_data = vpn_config_generator.generate_ikev2_config(
+                server_ip=server['ipv4_address'],
+                server_location=server['location'],
+                server_country=server['country_code'],
+                user_id=user['id'],
+                connection_id=connection_id
+            )
+        else:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Unsupported protocol: {protocol}. Use wireguard, openvpn, or ikev2"
+            )
+        
+        # Return as downloadable file
+        return StreamingResponse(
+            io.StringIO(config_data['config']),
+            media_type="text/plain" if protocol != "ikev2" else "application/x-apple-aspen-config",
+            headers={"Content-Disposition": f"attachment; filename={config_data['filename']}"}
+        )
+    
+    except Exception as e:
+        logger.error(f"Failed to generate config: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate configuration: {str(e)}")
 
 # Statistics Routes
 @api_router.get("/stats/overview")
