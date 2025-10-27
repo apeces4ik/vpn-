@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { toast } from 'sonner';
 import { 
   Shield, Power, Download, ChevronRight, Globe, 
-  Zap, Activity, Clock, ArrowUpRight, MapPin
+  Zap, Activity, Clock, ArrowUpRight, MapPin, Settings
 } from 'lucide-react';
 import './Dashboard.css';
+import AdvancedFeaturesModal from '../components/AdvancedFeaturesModal';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
