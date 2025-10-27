@@ -151,11 +151,11 @@ backend:
 
   - task: "Payment Status Real-time Monitoring"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -166,6 +166,15 @@ backend:
           - Auto-updates local database if status changed
           - Automatically activates user plan when payment confirmed/finished
           - Returns comprehensive payment info including NOWPayments data
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ PAYMENT STATUS MONITORING WORKING
+          - Real-time status checking: Successfully tested with live payment
+          - Database integration: Payment status properly stored and retrieved
+          - NOWPayments sync: Status synchronization working
+          - Comprehensive data: Returns payment amount, address, currency, and status
+          - Auto-activation logic: Plan activation code ready for confirmed payments
 
   - task: "Enhanced Payment Webhook Handler"
     implemented: true
