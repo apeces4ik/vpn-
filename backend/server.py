@@ -1278,6 +1278,324 @@ async def trigger_server_health_check(server_id: str):
     }
 
 
+# ============= VPN PROVIDER MANAGEMENT (DigitalOcean & Vultr) =============
+
+@api_router.post("/admin/vpn-providers/deploy-server")
+async def deploy_vpn_server(
+    provider: str,
+    region: str,
+    location_name: str,
+    country_code: str,
+    plan: str = None,
+    api_key: str = None
+):
+    """
+    Deploy a new VPN server using DigitalOcean or Vultr
+    
+    Args:
+        provider: 'digitalocean' or 'vultr'
+        region: Provider region code (e.g., 'nyc1', 'ewr')
+        location_name: Display name (e.g., 'New York')
+        country_code: Country code (e.g., 'US')
+        plan: Server plan/size (optional, uses default)
+        api_key: API key for provider (optional, uses env var)
+    """
+    try:
+        # Get API key from environment if not provided
+        if not api_key:
+            env_key = f"{provider.upper()}_API_KEY"
+            api_key = os.environ.get(env_key)
+            
+            if not api_key:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"API key required. Set {env_key} environment variable or provide api_key parameter"
+                )
+        
+        # Get provider instance
+        vpn_provider = get_vpn_provider(provider, api_key)
+        
+        # Create server
+        server_name = f"vpn-{location_name.lower().replace(' ', '-')}-{datetime.now().strftime('%Y%m%d')}"
+        
+        logger.info(f"🚀 Deploying {provider} VPN server in {region}...")
+        
+        result = await vpn_provider.create_server(
+            region=region,
+            plan=plan,
+            name=server_name
+        )
+        
+        await vpn_provider.close()
+        
+        if not result:
+            raise HTTPException(status_code=500, detail="Failed to create server")
+        
+        # Add to database
+        server_data = {
+            "id": str(uuid.uuid4()),
+            "provider": provider,
+            "provider_server_id": result.get('server_id'),
+            "hostname": server_name,
+            "location": location_name,
+            "country_code": country_code,
+            "ipv4_address": result.get('ip_address', 'pending'),
+            "ipv6_address": result.get('ipv6_address'),
+            "is_active": False,  # Will be activated after setup completes
+            "max_capacity": 1000,
+            "current_connections": 0,
+            "supported_protocols": ['wireguard', 'openvpn', 'ikev2'],
+            "supports_double_vpn": True,
+            "supports_tor": False,
+            "supports_obfuscation": True,
+            "obfs4_port": 9001,
+            "provider_region": region,
+            "provider_plan": plan or 'default',
+            "deployment_status": "deploying",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "last_health_check": None
+        }
+        
+        await db.vpn_servers.insert_one(server_data)
+        
+        logger.info(f"✅ VPN server deployment initiated: {server_data['id']}")
+        
+        return {
+            "message": "VPN server deployment initiated",
+            "server_id": server_data['id'],
+            "provider": provider,
+            "provider_server_id": result.get('server_id'),
+            "location": location_name,
+            "region": region,
+            "status": "deploying",
+            "estimated_setup_time": "5-10 minutes",
+            "note": "Server will be automatically activated after setup completes"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error deploying VPN server: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/vpn-providers/{provider}/servers")
+async def list_provider_servers(provider: str, api_key: str = None):
+    """List all servers from a specific provider"""
+    try:
+        if not api_key:
+            env_key = f"{provider.upper()}_API_KEY"
+            api_key = os.environ.get(env_key)
+            
+            if not api_key:
+                raise HTTPException(status_code=400, detail=f"API key required for {provider}")
+        
+        vpn_provider = get_vpn_provider(provider, api_key)
+        servers = await vpn_provider.list_servers()
+        await vpn_provider.close()
+        
+        return {
+            "provider": provider,
+            "servers": servers,
+            "total": len(servers)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error listing {provider} servers: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/vpn-providers/{provider}/server/{server_id}")
+async def get_provider_server_info(provider: str, server_id: str, api_key: str = None):
+    """Get detailed information about a server from provider"""
+    try:
+        if not api_key:
+            env_key = f"{provider.upper()}_API_KEY"
+            api_key = os.environ.get(env_key)
+            
+            if not api_key:
+                raise HTTPException(status_code=400, detail=f"API key required for {provider}")
+        
+        vpn_provider = get_vpn_provider(provider, api_key)
+        server_info = await vpn_provider.get_server_info(server_id)
+        await vpn_provider.close()
+        
+        if not server_info:
+            raise HTTPException(status_code=404, detail="Server not found")
+        
+        return server_info
+        
+    except Exception as e:
+        logger.error(f"Error getting {provider} server info: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/vpn-providers/{provider}/server/{server_id}/sync")
+async def sync_server_status(provider: str, server_id: str, api_key: str = None):
+    """
+    Sync server status from provider to database
+    Updates IP address, status, and other info
+    """
+    try:
+        # Find server in database by provider_server_id
+        db_server = await db.vpn_servers.find_one({
+            "provider_server_id": server_id
+        }, {"_id": 0})
+        
+        if not db_server:
+            raise HTTPException(status_code=404, detail="Server not found in database")
+        
+        if not api_key:
+            env_key = f"{provider.upper()}_API_KEY"
+            api_key = os.environ.get(env_key)
+            
+            if not api_key:
+                raise HTTPException(status_code=400, detail=f"API key required for {provider}")
+        
+        # Get fresh info from provider
+        vpn_provider = get_vpn_provider(provider, api_key)
+        provider_info = await vpn_provider.get_server_info(server_id)
+        await vpn_provider.close()
+        
+        if not provider_info:
+            raise HTTPException(status_code=404, detail="Server not found at provider")
+        
+        # Update database
+        update_data = {
+            "ipv4_address": provider_info.get('ip_address'),
+            "ipv6_address": provider_info.get('ipv6_address'),
+            "deployment_status": "active" if provider_info.get('status') == 'active' else "deploying",
+            "is_active": provider_info.get('status') == 'active',
+            "last_sync": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.vpn_servers.update_one(
+            {"provider_server_id": server_id},
+            {"$set": update_data}
+        )
+        
+        logger.info(f"✅ Synced server {server_id} from {provider}")
+        
+        return {
+            "message": "Server status synced",
+            "server_id": db_server.get('id'),
+            "provider": provider,
+            "status": provider_info.get('status'),
+            "ip_address": provider_info.get('ip_address'),
+            "updated_fields": update_data
+        }
+        
+    except Exception as e:
+        logger.error(f"Error syncing server status: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.delete("/admin/vpn-providers/{provider}/server/{server_id}")
+async def delete_provider_server(provider: str, server_id: str, api_key: str = None):
+    """
+    Delete a VPN server from provider and database
+    WARNING: This is irreversible!
+    """
+    try:
+        if not api_key:
+            env_key = f"{provider.upper()}_API_KEY"
+            api_key = os.environ.get(env_key)
+            
+            if not api_key:
+                raise HTTPException(status_code=400, detail=f"API key required for {provider}")
+        
+        # Delete from provider
+        vpn_provider = get_vpn_provider(provider, api_key)
+        deleted = await vpn_provider.delete_server(server_id)
+        await vpn_provider.close()
+        
+        if not deleted:
+            raise HTTPException(status_code=500, detail="Failed to delete server from provider")
+        
+        # Remove from database
+        result = await db.vpn_servers.delete_one({"provider_server_id": server_id})
+        
+        logger.info(f"✅ Deleted server {server_id} from {provider}")
+        
+        return {
+            "message": "Server deleted successfully",
+            "provider": provider,
+            "server_id": server_id,
+            "deleted_from_database": result.deleted_count > 0
+        }
+        
+    except Exception as e:
+        logger.error(f"Error deleting server: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/vpn-providers/{provider}/server/{server_id}/reboot")
+async def reboot_provider_server(provider: str, server_id: str, api_key: str = None):
+    """Reboot a VPN server"""
+    try:
+        if not api_key:
+            env_key = f"{provider.upper()}_API_KEY"
+            api_key = os.environ.get(env_key)
+            
+            if not api_key:
+                raise HTTPException(status_code=400, detail=f"API key required for {provider}")
+        
+        vpn_provider = get_vpn_provider(provider, api_key)
+        rebooted = await vpn_provider.reboot_server(server_id)
+        await vpn_provider.close()
+        
+        if not rebooted:
+            raise HTTPException(status_code=500, detail="Failed to reboot server")
+        
+        # Update status in database
+        await db.vpn_servers.update_one(
+            {"provider_server_id": server_id},
+            {"$set": {
+                "is_active": False,
+                "deployment_status": "rebooting",
+                "last_reboot": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        logger.info(f"✅ Rebooted server {server_id} on {provider}")
+        
+        return {
+            "message": "Server reboot initiated",
+            "provider": provider,
+            "server_id": server_id,
+            "estimated_downtime": "2-5 minutes"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error rebooting server: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/admin/vpn-providers/{provider}/regions")
+async def get_provider_regions(provider: str, api_key: str = None):
+    """Get available regions from provider"""
+    try:
+        if not api_key:
+            env_key = f"{provider.upper()}_API_KEY"
+            api_key = os.environ.get(env_key)
+            
+            if not api_key:
+                raise HTTPException(status_code=400, detail=f"API key required for {provider}")
+        
+        vpn_provider = get_vpn_provider(provider, api_key)
+        regions = await vpn_provider.get_available_regions()
+        await vpn_provider.close()
+        
+        return {
+            "provider": provider,
+            "regions": regions,
+            "total": len(regions)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting regions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 # ============= ADVANCED VPN FEATURES ROUTES =============
 
 @api_router.get("/servers/double-vpn")
