@@ -163,6 +163,26 @@ class NOWPaymentsClient:
                 # Return supported privacy and major cryptocurrencies
                 return ["btc", "eth", "ltc", "xmr", "zec", "dash", "usdt", "usdc", "dai", "xrp", "ada", "sol", "bnb", "trx"]
     
+    async def get_minimum_payment_amount(self, currency_from: str, currency_to: str) -> Dict:
+        """Get minimum payment amount for a currency pair"""
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                params = {
+                    "currency_from": currency_from.lower(),
+                    "currency_to": currency_to.lower()
+                }
+                response = await client.get(
+                    f"{self.base_url}/min-amount",
+                    headers=self.headers,
+                    params=params
+                )
+                response.raise_for_status()
+                return response.json()
+            except Exception as e:
+                logger.error(f"Failed to get minimum amount: {str(e)}")
+                # Return a sensible default if API fails
+                return {"min_amount": 10.0}
+    
     async def get_estimate_price(self, amount: float, currency_from: str, currency_to: str) -> Dict:
         async with httpx.AsyncClient(timeout=30.0) as client:
             try:
