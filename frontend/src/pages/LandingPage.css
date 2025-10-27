@@ -1,7 +1,7 @@
 .landing-page {
   min-height: 100vh;
-  background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(16, 185, 129, 0.08) 0%, transparent 50%), 
-              linear-gradient(180deg, #0a0a0b 0%, #111113 100%);
+  background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0, 255, 65, 0.12) 0%, transparent 50%), 
+              linear-gradient(180deg, #000000 0%, #0a0f0a 100%);
   position: relative;
   overflow-x: hidden;
 }
@@ -14,8 +14,8 @@
   right: 0;
   bottom: 0;
   background-image: 
-    radial-gradient(circle at 20% 50%, rgba(16, 185, 129, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.03) 0%, transparent 50%);
+    radial-gradient(circle at 20% 50%, rgba(0, 255, 65, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
   pointer-events: none;
   z-index: 0;
   animation: backgroundFloat 15s ease-in-out infinite;
