@@ -284,14 +284,72 @@ async def init_servers():
         return {"message": "Servers already initialized"}
     
     default_servers = [
+        # North America (15 servers)
         VPNServer(hostname="us-ny-01.anonvpn.io", location="New York", country_code="US", ipv4_address="192.0.2.1"),
-        VPNServer(hostname="us-la-01.anonvpn.io", location="Los Angeles", country_code="US", ipv4_address="192.0.2.2"),
-        VPNServer(hostname="uk-lon-01.anonvpn.io", location="London", country_code="GB", ipv4_address="192.0.2.3"),
-        VPNServer(hostname="de-fra-01.anonvpn.io", location="Frankfurt", country_code="DE", ipv4_address="192.0.2.4"),
-        VPNServer(hostname="nl-ams-01.anonvpn.io", location="Amsterdam", country_code="NL", ipv4_address="192.0.2.5"),
-        VPNServer(hostname="sg-sin-01.anonvpn.io", location="Singapore", country_code="SG", ipv4_address="192.0.2.6"),
-        VPNServer(hostname="jp-tok-01.anonvpn.io", location="Tokyo", country_code="JP", ipv4_address="192.0.2.7"),
-        VPNServer(hostname="au-syd-01.anonvpn.io", location="Sydney", country_code="AU", ipv4_address="192.0.2.8"),
+        VPNServer(hostname="us-ny-02.anonvpn.io", location="New York", country_code="US", ipv4_address="192.0.2.2"),
+        VPNServer(hostname="us-la-01.anonvpn.io", location="Los Angeles", country_code="US", ipv4_address="192.0.2.3"),
+        VPNServer(hostname="us-la-02.anonvpn.io", location="Los Angeles", country_code="US", ipv4_address="192.0.2.4"),
+        VPNServer(hostname="us-chi-01.anonvpn.io", location="Chicago", country_code="US", ipv4_address="192.0.2.5"),
+        VPNServer(hostname="us-mia-01.anonvpn.io", location="Miami", country_code="US", ipv4_address="192.0.2.6"),
+        VPNServer(hostname="us-sea-01.anonvpn.io", location="Seattle", country_code="US", ipv4_address="192.0.2.7"),
+        VPNServer(hostname="ca-tor-01.anonvpn.io", location="Toronto", country_code="CA", ipv4_address="192.0.2.8"),
+        VPNServer(hostname="ca-van-01.anonvpn.io", location="Vancouver", country_code="CA", ipv4_address="192.0.2.9"),
+        VPNServer(hostname="us-atl-01.anonvpn.io", location="Atlanta", country_code="US", ipv4_address="192.0.2.10"),
+        VPNServer(hostname="us-dal-01.anonvpn.io", location="Dallas", country_code="US", ipv4_address="192.0.2.11"),
+        VPNServer(hostname="us-phx-01.anonvpn.io", location="Phoenix", country_code="US", ipv4_address="192.0.2.12"),
+        VPNServer(hostname="us-den-01.anonvpn.io", location="Denver", country_code="US", ipv4_address="192.0.2.13"),
+        VPNServer(hostname="ca-mon-01.anonvpn.io", location="Montreal", country_code="CA", ipv4_address="192.0.2.14"),
+        VPNServer(hostname="mx-mex-01.anonvpn.io", location="Mexico City", country_code="MX", ipv4_address="192.0.2.15"),
+        
+        # Europe (20 servers)
+        VPNServer(hostname="uk-lon-01.anonvpn.io", location="London", country_code="GB", ipv4_address="192.0.2.16"),
+        VPNServer(hostname="uk-lon-02.anonvpn.io", location="London", country_code="GB", ipv4_address="192.0.2.17"),
+        VPNServer(hostname="de-fra-01.anonvpn.io", location="Frankfurt", country_code="DE", ipv4_address="192.0.2.18"),
+        VPNServer(hostname="de-fra-02.anonvpn.io", location="Frankfurt", country_code="DE", ipv4_address="192.0.2.19"),
+        VPNServer(hostname="de-ber-01.anonvpn.io", location="Berlin", country_code="DE", ipv4_address="192.0.2.20"),
+        VPNServer(hostname="nl-ams-01.anonvpn.io", location="Amsterdam", country_code="NL", ipv4_address="192.0.2.21"),
+        VPNServer(hostname="nl-ams-02.anonvpn.io", location="Amsterdam", country_code="NL", ipv4_address="192.0.2.22"),
+        VPNServer(hostname="fr-par-01.anonvpn.io", location="Paris", country_code="FR", ipv4_address="192.0.2.23"),
+        VPNServer(hostname="fr-par-02.anonvpn.io", location="Paris", country_code="FR", ipv4_address="192.0.2.24"),
+        VPNServer(hostname="se-sto-01.anonvpn.io", location="Stockholm", country_code="SE", ipv4_address="192.0.2.25"),
+        VPNServer(hostname="ch-zur-01.anonvpn.io", location="Zurich", country_code="CH", ipv4_address="192.0.2.26"),
+        VPNServer(hostname="es-mad-01.anonvpn.io", location="Madrid", country_code="ES", ipv4_address="192.0.2.27"),
+        VPNServer(hostname="it-mil-01.anonvpn.io", location="Milan", country_code="IT", ipv4_address="192.0.2.28"),
+        VPNServer(hostname="pl-war-01.anonvpn.io", location="Warsaw", country_code="PL", ipv4_address="192.0.2.29"),
+        VPNServer(hostname="no-osl-01.anonvpn.io", location="Oslo", country_code="NO", ipv4_address="192.0.2.30"),
+        VPNServer(hostname="dk-cop-01.anonvpn.io", location="Copenhagen", country_code="DK", ipv4_address="192.0.2.31"),
+        VPNServer(hostname="ie-dub-01.anonvpn.io", location="Dublin", country_code="IE", ipv4_address="192.0.2.32"),
+        VPNServer(hostname="be-bru-01.anonvpn.io", location="Brussels", country_code="BE", ipv4_address="192.0.2.33"),
+        VPNServer(hostname="at-vie-01.anonvpn.io", location="Vienna", country_code="AT", ipv4_address="192.0.2.34"),
+        VPNServer(hostname="cz-pra-01.anonvpn.io", location="Prague", country_code="CZ", ipv4_address="192.0.2.35"),
+        
+        # Asia (10 servers)
+        VPNServer(hostname="sg-sin-01.anonvpn.io", location="Singapore", country_code="SG", ipv4_address="192.0.2.36"),
+        VPNServer(hostname="sg-sin-02.anonvpn.io", location="Singapore", country_code="SG", ipv4_address="192.0.2.37"),
+        VPNServer(hostname="jp-tok-01.anonvpn.io", location="Tokyo", country_code="JP", ipv4_address="192.0.2.38"),
+        VPNServer(hostname="jp-tok-02.anonvpn.io", location="Tokyo", country_code="JP", ipv4_address="192.0.2.39"),
+        VPNServer(hostname="hk-hkg-01.anonvpn.io", location="Hong Kong", country_code="HK", ipv4_address="192.0.2.40"),
+        VPNServer(hostname="kr-seo-01.anonvpn.io", location="Seoul", country_code="KR", ipv4_address="192.0.2.41"),
+        VPNServer(hostname="in-mum-01.anonvpn.io", location="Mumbai", country_code="IN", ipv4_address="192.0.2.42"),
+        VPNServer(hostname="in-del-01.anonvpn.io", location="New Delhi", country_code="IN", ipv4_address="192.0.2.43"),
+        VPNServer(hostname="tw-tai-01.anonvpn.io", location="Taipei", country_code="TW", ipv4_address="192.0.2.44"),
+        VPNServer(hostname="th-ban-01.anonvpn.io", location="Bangkok", country_code="TH", ipv4_address="192.0.2.45"),
+        
+        # South America (5 servers)
+        VPNServer(hostname="br-sao-01.anonvpn.io", location="Sao Paulo", country_code="BR", ipv4_address="192.0.2.46"),
+        VPNServer(hostname="br-rio-01.anonvpn.io", location="Rio de Janeiro", country_code="BR", ipv4_address="192.0.2.47"),
+        VPNServer(hostname="ar-bue-01.anonvpn.io", location="Buenos Aires", country_code="AR", ipv4_address="192.0.2.48"),
+        VPNServer(hostname="cl-san-01.anonvpn.io", location="Santiago", country_code="CL", ipv4_address="192.0.2.49"),
+        VPNServer(hostname="co-bog-01.anonvpn.io", location="Bogota", country_code="CO", ipv4_address="192.0.2.50"),
+        
+        # Africa (3 servers)
+        VPNServer(hostname="za-joh-01.anonvpn.io", location="Johannesburg", country_code="ZA", ipv4_address="192.0.2.51"),
+        VPNServer(hostname="za-cap-01.anonvpn.io", location="Cape Town", country_code="ZA", ipv4_address="192.0.2.52"),
+        VPNServer(hostname="eg-cai-01.anonvpn.io", location="Cairo", country_code="EG", ipv4_address="192.0.2.53"),
+        
+        # Oceania (2 servers)
+        VPNServer(hostname="au-syd-01.anonvpn.io", location="Sydney", country_code="AU", ipv4_address="192.0.2.54"),
+        VPNServer(hostname="au-mel-01.anonvpn.io", location="Melbourne", country_code="AU", ipv4_address="192.0.2.55"),
     ]
     
     for server in default_servers:
