@@ -193,7 +193,7 @@ class AnonVPNTester:
             "billing_period": "monthly"
         }
         
-        success, data = await self.make_request('POST', '/payments/create', json=payment_data)
+        success, data = await self.make_request('POST', '/payments/create', params=payment_data)
         
         if success and data.get('id'):
             self.test_data['payment_id'] = data['id']
