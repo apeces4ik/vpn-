@@ -47,10 +47,24 @@ const Dashboard = ({ user }) => {
         setUserPlan(plan);
       }
 
+      // Fetch connection history
+      await fetchConnectionHistory();
+
       setLoading(false);
     } catch (error) {
       console.error('Failed to fetch data:', error);
       setLoading(false);
+    }
+  };
+
+  const fetchConnectionHistory = async () => {
+    try {
+      const response = await axios.get(`${API}/connections/user/${user.id}`, {
+        params: { active_only: false }
+      });
+      setConnectionHistory(response.data.slice(0, 10)); // Last 10 connections
+    } catch (error) {
+      console.error('Failed to fetch connection history:', error);
     }
   };
 
