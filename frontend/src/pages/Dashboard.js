@@ -22,6 +22,8 @@ const Dashboard = ({ user }) => {
   const [connectionHistory, setConnectionHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userPlan, setUserPlan] = useState(null);
+  const [showAdvancedModal, setShowAdvancedModal] = useState(false);
+  const [advancedServer, setAdvancedServer] = useState(null);
 
   useEffect(() => {
     fetchData();
