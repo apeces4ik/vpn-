@@ -563,6 +563,22 @@ async def create_payment(
             detail=f"Payment amount ${final_price:.2f} is below minimum ${MIN_PAYMENT_USD}. Please choose annual billing or a higher tier plan."
         )
     
+    # Try to get minimum amount for this currency pair
+    try:
+        min_data = await nowpayments_client.get_minimum_payment_amount("usd", pay_currency)
+        min_amount_usd = float(min_data.get('min_amount', 10.0))
+        
+        if final_price < min_amount_usd:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Payment amount ${final_price:.2f} is below minimum ${min_amount_usd:.2f} for {pay_currency.upper()}. Please choose annual billing or a higher tier plan."
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"Could not check minimum amount for {pay_currency}: {str(e)}")
+        # Continue anyway with general minimum
+    
     # Create payment record
     payment = Payment(
         user_id=user_id,
@@ -600,13 +616,13 @@ async def create_payment(
         return payment
     
     except HTTPException as e:
-        # Re-raise HTTP exceptions from NOWPayments client
+        # Re-raise HTTP exceptions from NOWPayments client with better messages
         raise e
     except Exception as e:
         logger.error(f"Unexpected error creating payment: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail="Failed to create payment. Please try a different cryptocurrency or contact support."
+            detail="Payment service temporarily unavailable. Please try a different cryptocurrency or contact support."
         )
 
 @api_router.get("/payments/{payment_id}", response_model=Payment)
