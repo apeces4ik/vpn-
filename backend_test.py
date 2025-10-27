@@ -1858,7 +1858,7 @@ async def main():
     """Run all backend tests"""
     print("🚀 Starting AnonVPN Enterprise Backend API Tests")
     print(f"Backend URL: {BACKEND_URL}")
-    print("🎯 Focus: COMPREHENSIVE TESTING OF ADVANCED VPN FEATURES - PHASE 2")
+    print("🎯 Focus: CORPORATE SOLUTIONS TESTING - PHASE 3")
     
     async with AnonVPNTester() as tester:
         # Run basic infrastructure tests first
@@ -1915,6 +1915,29 @@ async def main():
         
         # Statistics and analytics tests
         await tester.test_statistics_endpoints()
+        
+        # ============= CORPORATE SOLUTIONS TESTING =============
+        print("\n" + "="*60)
+        print("🏢 CORPORATE SOLUTIONS TESTING - PHASE 3")
+        print("="*60)
+        
+        # Test 1: Corporate Organizations Management
+        await tester.test_corporate_organizations_management()
+        
+        # Test 2: Team Member Management
+        await tester.test_team_member_management()
+        
+        # Test 3: Security Monitoring & Dashboard
+        await tester.test_security_monitoring_dashboard()
+        
+        # Test 4: Partner API with Authentication
+        await tester.test_partner_api_authentication()
+        
+        # Test 5: White-label Branding Support
+        await tester.test_white_label_branding()
+        
+        # Test 6: Corporate Features Integration
+        await tester.test_corporate_features_integration()
         
         # Print summary
         passed, failed = tester.print_summary()
