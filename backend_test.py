@@ -139,7 +139,7 @@ class AnonVPNTester:
         
         # Create user with email
         user_data = {"email": "test@anonvpn.example"}
-        success, data = await self.make_request('POST', '/users', json=user_data)
+        success, data = await self.make_request('POST', '/users', params=user_data)
         
         if success and data.get('id'):
             self.test_data['user_id'] = data['id']
