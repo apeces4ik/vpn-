@@ -422,6 +422,38 @@ backend:
           - Location data: 47 unique locations available
           - Server details: Complete server info with IPs, protocols, and capacity
 
+  - task: "Enhanced Payment Error Handling"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Fixed payment creation errors:
+          - Added get_minimum_payment_amount() method
+          - Enhanced error handling with specific NOWPayments error parsing
+          - Better error messages for USDT and other currencies
+          - Pre-validation of payment amounts against currency minimums
+          - Handles "Currency temporarily unavailable" scenarios gracefully
+          - Added /api/payments/min-amount endpoint
+          
+          User reported issues:
+          1. BTC with Basic monthly plan showing 400 Bad Request
+          2. USDT showing 500 Internal Server Error
+          
+          Root causes found:
+          - USDT: NOWPayments API returned "Can not get estimate from USDT to USD"
+          - BTC: Possible minimum amount issue
+          
+          Fixes implemented:
+          - Better error parsing and user-friendly messages
+          - Currency-specific minimum amount checking
+          - Graceful handling of NOWPayments API temporary issues
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
