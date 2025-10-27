@@ -148,7 +148,7 @@ const LandingPage = ({ user, createUser }) => {
             <span className="hero-title-line">Your Privacy,</span>
             <br />
             <span className="gradient-text">
-              <TypingEffect text="Absolutely Anonymous" delay={80} />
+              <TypingEffect text="Absolutely Anonymous" delay={120} />
             </span>
           </h1>
           
