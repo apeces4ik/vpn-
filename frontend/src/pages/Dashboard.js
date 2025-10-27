@@ -309,6 +309,54 @@ const Dashboard = ({ user }) => {
             ))}
           </div>
         </div>
+
+        {/* Connection History */}
+        {connectionHistory.length > 0 && (
+          <div className="history-section" data-testid="connection-history">
+            <div className="section-header">
+              <h2 className="section-title">Connection History</h2>
+              <div className="history-count">Last {connectionHistory.length} connections</div>
+            </div>
+
+            <div className="history-table-wrapper">
+              <table className="history-table">
+                <thead>
+                  <tr>
+                    <th>Server</th>
+                    <th>Device</th>
+                    <th>Connected At</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {connectionHistory.map((conn, index) => {
+                    const server = servers.find(s => s.id === conn.server_id);
+                    const connectedAt = new Date(conn.connected_at);
+                    const disconnectedAt = conn.disconnected_at ? new Date(conn.disconnected_at) : null;
+                    const duration = disconnectedAt 
+                      ? Math.floor((disconnectedAt - connectedAt) / 60000) 
+                      : Math.floor((new Date() - connectedAt) / 60000);
+                    
+                    return (
+                      <tr key={index}>
+                        <td>{server ? `${server.location}, ${server.country_code}` : 'Unknown'}</td>
+                        <td>{conn.device_name}</td>
+                        <td>{connectedAt.toLocaleString()}</td>
+                        <td>{duration} min</td>
+                        <td>
+                          <span className={`status-badge-small ${conn.is_active ? 'active' : 'inactive'}`}>
+                            {conn.is_active ? 'Active' : 'Disconnected'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
