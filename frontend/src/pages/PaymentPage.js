@@ -370,6 +370,18 @@ const PaymentPage = ({ user, setUser }) => {
         {selectedPlan && (
           <div className="crypto-section" data-testid="crypto-section">
             <h3 className="section-title">Select Cryptocurrency</h3>
+            
+            {/* Payment minimum notice */}
+            {billingPeriod === 'monthly' && selectedCrypto === 'btc' && (
+              <div className="payment-notice warning" style={{marginBottom: '1rem'}}>
+                <AlertCircle size={20} />
+                <div>
+                  <strong>Note:</strong> Bitcoin (BTC) has a minimum payment of ~$20.
+                  For monthly plans, consider using ETH, LTC, or select annual billing.
+                </div>
+              </div>
+            )}
+            
             <div className="crypto-grid">
               {['btc', 'eth', 'ltc', 'xmr', 'usdt', 'usdc'].map((crypto) => (
                 <button
@@ -382,6 +394,11 @@ const PaymentPage = ({ user, setUser }) => {
                   {selectedCrypto === crypto && <Check size={18} className="check-mark" />}
                 </button>
               ))}
+            </div>
+            
+            <div className="crypto-recommendations" style={{marginTop: '1rem', fontSize: '0.9rem', color: '#888'}}>
+              <p><strong>Recommended for monthly plans:</strong> ETH, LTC, USDT, USDC</p>
+              <p><strong>Best for privacy:</strong> XMR (Monero)</p>
             </div>
           </div>
         )}
