@@ -381,7 +381,7 @@ async def create_payment(
     )
     
     # Create payment via NOWPayments
-    ipn_callback_url = f"{os.environ.get('BACKEND_URL', 'http://localhost:8001')}/api/payments/webhook"
+    ipn_callback_url = f"{settings.backend_url}/api/payments/webhook"
     payment_data = await nowpayments_client.create_payment(
         price_amount=price,
         price_currency="usd",
