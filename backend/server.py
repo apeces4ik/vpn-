@@ -117,6 +117,13 @@ class Payment(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+class SplitTunnelRule(BaseModel):
+    """Split tunneling rule for selective routing"""
+    model_config = ConfigDict(extra="ignore")
+    type: str  # "domain", "ip", "subnet"
+    value: str  # domain name, IP address, or CIDR
+    action: str = "bypass"  # "bypass" or "include"
+
 class Connection(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -128,6 +135,13 @@ class Connection(BaseModel):
     bytes_sent: int = 0
     bytes_received: int = 0
     is_active: bool = True
+    # Advanced features
+    protocol: str = "WireGuard"  # WireGuard, OpenVPN, IKEv2
+    enable_double_vpn: bool = False
+    exit_server_id: Optional[str] = None  # For double VPN (entry server is server_id)
+    enable_obfuscation: bool = False
+    enable_tor: bool = False
+    split_tunnel_rules: List[SplitTunnelRule] = []
 
 # ============= NOWPAYMENTS CLIENT =============
 
