@@ -1306,17 +1306,17 @@ async def main():
     """Run all backend tests"""
     print("🚀 Starting AnonVPN Enterprise Backend API Tests")
     print(f"Backend URL: {BACKEND_URL}")
-    print("🎯 Focus: Enhanced Payment Error Handling Testing")
+    print("🎯 Focus: COMPREHENSIVE TESTING OF ADVANCED VPN FEATURES - PHASE 2")
     
     async with AnonVPNTester() as tester:
-        # Run tests in logical order
+        # Run basic infrastructure tests first
         await tester.test_health_check()
         await tester.test_tariffs_initialization()
         await tester.test_servers_initialization()
         await tester.test_user_management()
         await tester.test_nowpayments_integration()
         
-        # NEW: Test enhanced payment error handling features
+        # Test enhanced payment error handling features
         await tester.test_minimum_amount_endpoint()
         await tester.test_enhanced_payment_error_handling()
         await tester.test_error_message_quality()
@@ -1326,9 +1326,42 @@ async def main():
         await tester.test_payment_status_monitoring()
         await tester.test_webhook_handler()
         
-        # VPN functionality tests
+        # Basic VPN functionality tests
         await tester.test_vpn_connection()
         await tester.test_vpn_config_generation()
+        
+        # ============= ADVANCED VPN FEATURES TESTING =============
+        print("\n" + "="*60)
+        print("🚀 ADVANCED VPN FEATURES TESTING - PHASE 2")
+        print("="*60)
+        
+        # Test 1: Advanced Features Info
+        await tester.test_advanced_features_info()
+        
+        # Test 2: Server Filtering Endpoints
+        await tester.test_double_vpn_servers()
+        await tester.test_tor_enabled_servers()
+        await tester.test_obfuscated_servers()
+        
+        # Test 3: Advanced Connection Creation
+        await tester.test_advanced_connection_creation()
+        
+        # Test 4: Advanced Config Generation
+        await tester.test_advanced_config_generation()
+        
+        # Test 5: Edge Cases
+        await tester.test_edge_cases()
+        
+        # Test 6: Feature Combinations
+        await tester.test_feature_combinations()
+        
+        # Test 7: Tariff Plan Features Validation
+        await tester.test_tariff_plan_features()
+        
+        # Test 8: Server Capabilities Validation
+        await tester.test_server_capabilities()
+        
+        # Statistics and analytics tests
         await tester.test_statistics_endpoints()
         
         # Print summary
