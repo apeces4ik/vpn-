@@ -544,7 +544,7 @@ agent_communication:
       - Verify minimum amount checking works correctly
       - Test that error messages are user-friendly
       
-      Backend URL: https://ciphervpn.preview.emergentagent.com/api
+      Backend URL: https://vpn-features.preview.emergentagent.com/api
       
       Please test payment creation with various cryptocurrencies and verify error handling.
   - agent: "testing"
