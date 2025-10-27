@@ -584,8 +584,24 @@ async def get_locations():
 
 # User Routes
 @api_router.post("/users", response_model=User)
-async def create_user(email: Optional[EmailStr] = None):
-    user = User(email=email)
+async def create_user(
+    email: Optional[EmailStr] = None,
+    wallet_address: Optional[str] = None
+):
+    # Check if user already exists with this wallet address
+    if wallet_address:
+        existing_user = await db.users.find_one({"wallet_address": wallet_address}, {"_id": 0})
+        if existing_user:
+            # Return existing user
+            if isinstance(existing_user.get('created_at'), str):
+                existing_user['created_at'] = datetime.fromisoformat(existing_user['created_at'])
+            if existing_user.get('last_seen') and isinstance(existing_user.get('last_seen'), str):
+                existing_user['last_seen'] = datetime.fromisoformat(existing_user['last_seen'])
+            if existing_user.get('plan_expires_at') and isinstance(existing_user.get('plan_expires_at'), str):
+                existing_user['plan_expires_at'] = datetime.fromisoformat(existing_user['plan_expires_at'])
+            return User(**existing_user)
+    
+    user = User(email=email, wallet_address=wallet_address)
     doc = user.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
     if doc.get('last_seen'):
