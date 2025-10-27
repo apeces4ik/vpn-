@@ -728,11 +728,11 @@ backend:
 
   - task: "Advanced Connection API Endpoint"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -745,6 +745,44 @@ backend:
           - Validates server capabilities (Tor, obfuscation support)
           - Returns connection details and config URL
           - Updates Connection model with new fields
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ ADVANCED CONNECTION API ENDPOINT FULLY WORKING
+          
+          Comprehensive Testing Results:
+          
+          1. ✅ Endpoint Functionality (/api/connections/advanced):
+             - Accepts all required parameters: user_id, server_id, device_name
+             - Supports optional protocol parameter (default: WireGuard)
+             - Handles all advanced feature flags correctly
+          
+          2. ✅ Feature Access Control:
+             - Basic plan: Correctly denies Double VPN, Obfuscation, Tor access
+             - Pro plan: Allows Double VPN and Obfuscation, denies Tor
+             - Ultimate plan: Allows all features including Tor-over-VPN
+             - Proper error messages for unauthorized features
+          
+          3. ✅ Server Validation:
+             - Validates server existence and active status
+             - Checks server capabilities (supports_tor, supports_obfuscation)
+             - Requires exit_server_id when enable_double_vpn=true
+             - Rejects non-Tor servers for Tor connections
+          
+          4. ✅ Parameter Handling:
+             - enable_double_vpn: Boolean parameter working
+             - enable_obfuscation: Boolean parameter working
+             - enable_tor: Boolean parameter working
+             - split_tunnel_rules: Array parameter working
+             - exit_server_id: Optional parameter for Double VPN
+          
+          5. ✅ Response Format:
+             - Returns connection object with all advanced settings
+             - Includes config_url for advanced config download
+             - Provides clear success/error messages
+             - Updates Connection model with advanced fields
+          
+          Advanced Connection API is production-ready for all advanced VPN features.
 
   - task: "Advanced Config Download Endpoint"
     implemented: true
