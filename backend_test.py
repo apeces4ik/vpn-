@@ -771,7 +771,7 @@ class AnonVPNTester:
             "user_id": self.test_data['basic_user_id'],
             "server_id": self.test_data['server_id'],
             "device_name": "Test Device",
-            "enable_tor": True
+            "enable_tor": "true"
         }
         
         success, data = await self.make_request('POST', '/connections/advanced', params=tor_data)
