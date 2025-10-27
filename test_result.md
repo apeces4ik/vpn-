@@ -505,6 +505,167 @@ backend:
           
           The enhanced payment error handling system is fully functional and addresses all reported user issues.
 
+  - task: "Double VPN Feature"
+    implemented: true
+    working: "NA"
+    file: "backend/vpn_config_generator.py, backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Implemented Double VPN (multi-hop routing):
+          - Added generate_double_vpn_config() method
+          - Supports WireGuard and OpenVPN protocols
+          - Sequential routing: Client -> Entry Server -> Exit Server -> Internet
+          - GET /api/servers/double-vpn endpoint for server pairs
+          - POST /api/connections/advanced with enable_double_vpn flag
+          - Enhanced VPNServer model with supports_double_vpn flag
+          - All 55 servers support Double VPN by default
+          - Feature restricted to Pro and Ultimate plans
+
+  - task: "Obfuscation (obfs4) Feature"
+    implemented: true
+    working: "NA"
+    file: "backend/vpn_config_generator.py, backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Implemented VPN Obfuscation with obfs4:
+          - Added generate_obfuscated_config() method
+          - OpenVPN with obfs4 transport layer
+          - Disguises VPN traffic as regular HTTPS
+          - Bypasses Deep Packet Inspection (DPI)
+          - GET /api/servers/obfuscated endpoint
+          - All servers have supports_obfuscation=True
+          - obfs4_port configured (default: 9001)
+          - Feature restricted to Pro and Ultimate plans
+
+  - task: "Tor-over-VPN Integration"
+    implemented: true
+    working: "NA"
+    file: "backend/vpn_config_generator.py, backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Implemented Tor-over-VPN:
+          - Added generate_tor_over_vpn_config() method
+          - Supports WireGuard and OpenVPN protocols
+          - Traffic flow: Client -> VPN -> Tor Network -> Internet
+          - 10 Tor-enabled servers across US, EU, and Asia
+          - GET /api/servers/tor-enabled endpoint
+          - Server-side Tor proxy (SOCKS port 9050)
+          - Feature restricted to Ultimate plan only
+          - Tor servers: New York, LA, Seattle, Frankfurt, Amsterdam, Stockholm, Zurich, Singapore, Tokyo
+
+  - task: "Split Tunneling Feature"
+    implemented: true
+    working: "NA"
+    file: "backend/vpn_config_generator.py, backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Implemented Split Tunneling:
+          - Added SplitTunnelRule model (type, value, action)
+          - add_split_tunneling() method for rule application
+          - Supports domain-based, IP-based, and subnet-based rules
+          - Actions: bypass (direct) or include (VPN)
+          - Rules configurable per connection
+          - Works with both WireGuard and OpenVPN
+          - Available to all plans
+          - Applied to config generation automatically
+
+  - task: "Advanced Connection API Endpoint"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Created POST /api/connections/advanced endpoint:
+          - Creates connection with advanced features
+          - Parameters: user_id, server_id, protocol, device_name
+          - Advanced options: enable_double_vpn, exit_server_id, enable_obfuscation, enable_tor, split_tunnel_rules
+          - Feature access control based on user plan
+          - Validates server capabilities (Tor, obfuscation support)
+          - Returns connection details and config URL
+          - Updates Connection model with new fields
+
+  - task: "Advanced Config Download Endpoint"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Created GET /api/connections/{id}/advanced-config endpoint:
+          - Generates config based on enabled features
+          - Handles Double VPN configs
+          - Handles obfuscated configs
+          - Handles Tor-over-VPN configs
+          - Applies split tunneling rules
+          - Returns downloadable config file
+          - Proper MIME types and filenames
+
+  - task: "Advanced Features Info Endpoint"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Created GET /api/features/advanced endpoint:
+          - Returns detailed info about all 4 advanced features
+          - Describes benefits and requirements for each feature
+          - Lists supported protocols per feature
+          - Includes icons and descriptions
+          - Useful for frontend feature showcase
+
+  - task: "Server Filtering Endpoints"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Created server filtering endpoints:
+          - GET /api/servers/double-vpn: Returns server pairs for multi-hop
+          - GET /api/servers/tor-enabled: Returns 10 Tor-enabled servers
+          - GET /api/servers/obfuscated: Returns obfuscation-capable servers
+          - Smart server pairing algorithm for Double VPN
+          - Recommends optimal entry/exit combinations
+          - Filters by region for better performance
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
