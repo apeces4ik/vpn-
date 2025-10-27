@@ -366,6 +366,27 @@
   margin-bottom: 32px;
 }
 
+.qr-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.qr-link:hover {
+  transform: scale(1.05);
+}
+
+.qr-hint {
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+}
+
 .payment-info {
   display: flex;
   flex-direction: column;
