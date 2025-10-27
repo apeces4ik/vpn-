@@ -249,6 +249,30 @@ nowpayments_client = NOWPaymentsClient()
 async def root():
     return {"message": "AnonVPN Enterprise API", "version": "1.0.0"}
 
+@api_router.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    try:
+        # Check database connection
+        await db.command('ping')
+        
+        # Check NOWPayments API
+        nowpayments_status = await nowpayments_client.get_status()
+        
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "nowpayments": nowpayments_status.get('message', 'unknown'),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
 # Tariff Plans Routes
 @api_router.get("/tariffs", response_model=List[TariffPlan])
 async def get_tariffs():
