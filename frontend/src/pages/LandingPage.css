@@ -176,10 +176,14 @@
   font-weight: 700;
   letter-spacing: -0.02em;
   animation: fadeInUp 0.8s ease-out 0.4s both;
+}
+
+.hero-title-line {
   background: linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,0.7) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  display: block;
 }
 
 .hero-description {
