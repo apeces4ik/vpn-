@@ -322,6 +322,67 @@ class AnonVPNTester:
                 else:
                     self.log_test(f"{protocol.title()} Config Generator", False, 
                         "Config too short or invalid", data)
+        
+        # Test the VPN config generator module directly
+        await self.test_vpn_module_directly()
+    
+    async def test_vpn_module_directly(self):
+        """Test VPN config generator module directly"""
+        print("    Testing VPN config generator module directly...")
+        
+        try:
+            # Import and test the VPN config generator
+            import sys
+            sys.path.append('/app/backend')
+            from vpn_config_generator import vpn_config_generator
+            
+            # Test WireGuard config generation
+            wg_config = vpn_config_generator.generate_wireguard_config(
+                server_ip="192.0.2.1",
+                server_location="Test Location",
+                server_country="US",
+                user_id="test-user",
+                connection_id="test-connection"
+            )
+            
+            if wg_config and wg_config.get('config') and len(wg_config['config']) > 200:
+                self.log_test("WireGuard Module Test", True, 
+                    f"Generated WireGuard config: {len(wg_config['config'])} chars")
+            else:
+                self.log_test("WireGuard Module Test", False, "WireGuard config generation failed")
+            
+            # Test OpenVPN config generation
+            ovpn_config = vpn_config_generator.generate_openvpn_config(
+                server_ip="192.0.2.1",
+                server_location="Test Location", 
+                server_country="US",
+                user_id="test-user",
+                connection_id="test-connection"
+            )
+            
+            if ovpn_config and ovpn_config.get('config') and len(ovpn_config['config']) > 200:
+                self.log_test("OpenVPN Module Test", True, 
+                    f"Generated OpenVPN config: {len(ovpn_config['config'])} chars")
+            else:
+                self.log_test("OpenVPN Module Test", False, "OpenVPN config generation failed")
+            
+            # Test IKEv2 config generation
+            ikev2_config = vpn_config_generator.generate_ikev2_config(
+                server_ip="192.0.2.1",
+                server_location="Test Location",
+                server_country="US", 
+                user_id="test-user",
+                connection_id="test-connection"
+            )
+            
+            if ikev2_config and ikev2_config.get('config') and len(ikev2_config['config']) > 200:
+                self.log_test("IKEv2 Module Test", True, 
+                    f"Generated IKEv2 config: {len(ikev2_config['config'])} chars")
+            else:
+                self.log_test("IKEv2 Module Test", False, "IKEv2 config generation failed")
+                
+        except Exception as e:
+            self.log_test("VPN Module Import", False, f"Failed to test VPN module: {str(e)}")
     
     async def simulate_active_plan_and_connection(self):
         """Simulate an active plan by directly updating the database and creating a connection"""
