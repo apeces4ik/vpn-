@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import './TypingEffect.css';
 
-const TypingEffect = ({ text, delay = 150, startDelay = 0, className = '' }) => {
+const TypingEffect = ({ 
+  text, 
+  delay = 150, 
+  startDelay = 0, 
+  className = '',
+  splitAt = null,
+  firstPartClassName = '',
+  secondPartClassName = ''
+}) => {
   const [displayedText, setDisplayedText] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showCursor, setShowCursor] = useState(true);
@@ -36,6 +44,25 @@ const TypingEffect = ({ text, delay = 150, startDelay = 0, className = '' }) => 
       return () => clearInterval(cursorInterval);
     }
   }, [currentIndex, text, delay, started]);
+
+  // If splitAt is provided, split the text and apply different styles
+  if (splitAt !== null && displayedText.length > 0) {
+    const firstPart = displayedText.slice(0, splitAt);
+    const secondPart = displayedText.slice(splitAt);
+    
+    return (
+      <span className={`typing-effect ${className}`}>
+        <span className={firstPartClassName}>{firstPart}</span>
+        {secondPart && (
+          <>
+            <br />
+            <span className={secondPartClassName}>{secondPart}</span>
+          </>
+        )}
+        {showCursor && <span className="typing-cursor">|</span>}
+      </span>
+    );
+  }
 
   return (
     <span className={`typing-effect ${className}`}>
