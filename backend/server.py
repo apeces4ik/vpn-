@@ -81,6 +81,12 @@ class VPNServer(BaseModel):
     current_connections: int = 0
     is_active: bool = True
     protocols: List[str] = ["WireGuard", "OpenVPN", "IKEv2"]
+    # Advanced features support
+    supports_obfuscation: bool = True
+    supports_tor: bool = False  # Only specific servers have Tor proxy
+    tor_socks_port: Optional[int] = None  # e.g., 9050
+    supports_double_vpn: bool = True
+    obfs4_port: Optional[int] = None  # For obfs4 obfuscation
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class User(BaseModel):
