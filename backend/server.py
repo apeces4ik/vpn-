@@ -423,8 +423,8 @@ async def init_tariffs():
             device_limit=3,
             speed_tier="1Gbps",
             special_features=[],
-            price_monthly=14.99,
-            price_annual=149.99,
+            price_monthly=19.99,
+            price_annual=199.99,
             crypto_discount=0.05
         ),
         TariffPlan(
@@ -432,8 +432,8 @@ async def init_tariffs():
             device_limit=5,
             speed_tier="10Gbps",
             special_features=["double_vpn", "obfuscation"],
-            price_monthly=24.99,
-            price_annual=249.99,
+            price_monthly=39.99,
+            price_annual=399.99,
             crypto_discount=0.10
         ),
         TariffPlan(
@@ -441,8 +441,8 @@ async def init_tariffs():
             device_limit=10,
             speed_tier="10Gbps",
             special_features=["double_vpn", "obfuscation", "tor_over_vpn", "dedicated_ip"],
-            price_monthly=39.99,
-            price_annual=399.99,
+            price_monthly=59.99,
+            price_annual=599.99,
             crypto_discount=0.15
         )
     ]
