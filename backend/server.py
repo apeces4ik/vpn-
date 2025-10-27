@@ -521,6 +521,16 @@ async def get_supported_currencies():
     currencies = await nowpayments_client.get_available_currencies()
     return {"currencies": currencies}
 
+@api_router.get("/payments/min-amount")
+async def get_minimum_amount(currency_from: str = "usd", currency_to: str = "btc"):
+    """Get minimum payment amount for a currency pair"""
+    try:
+        min_data = await nowpayments_client.get_minimum_payment_amount(currency_from, currency_to)
+        return min_data
+    except Exception as e:
+        logger.error(f"Error getting minimum amount: {str(e)}")
+        return {"min_amount": 10.0, "currency": currency_to}
+
 @api_router.post("/payments/estimate")
 async def estimate_payment(amount: float, currency_from: str, currency_to: str):
     estimate = await nowpayments_client.get_estimate_price(amount, currency_from, currency_to)
