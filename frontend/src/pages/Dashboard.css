@@ -1,7 +1,7 @@
 .dashboard {
   min-height: 100vh;
-  background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(16, 185, 129, 0.06) 0%, transparent 50%), 
-              linear-gradient(180deg, #0a0a0b 0%, #111113 100%);
+  background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(0, 255, 65, 0.08) 0%, transparent 50%), 
+              linear-gradient(180deg, #000000 0%, #0a0f0a 100%);
   animation: fadeIn 0.5s ease-out;
   position: relative;
   overflow-x: hidden;
@@ -15,8 +15,8 @@
   right: 0;
   bottom: 0;
   background-image: 
-    radial-gradient(circle at 20% 30%, rgba(16, 185, 129, 0.04) 0%, transparent 40%),
-    radial-gradient(circle at 80% 70%, rgba(59, 130, 246, 0.04) 0%, transparent 40%);
+    radial-gradient(circle at 20% 30%, rgba(0, 255, 65, 0.06) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(16, 185, 129, 0.06) 0%, transparent 40%);
   pointer-events: none;
   z-index: 0;
   animation: backgroundFloat 20s ease-in-out infinite;
@@ -43,15 +43,15 @@
 }
 
 .dashboard-nav {
-  background: rgba(10, 10, 11, 0.7);
+  background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(30px) saturate(180%);
   -webkit-backdrop-filter: blur(30px) saturate(180%);
-  border-bottom: 1px solid rgba(16, 185, 129, 0.1);
+  border-bottom: 1px solid rgba(0, 255, 65, 0.15);
   position: sticky;
   top: 0;
   z-index: 100;
   animation: slideDown 0.5s ease-out;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 30px rgba(0, 255, 65, 0.1);
 }
 
 @keyframes slideDown {
