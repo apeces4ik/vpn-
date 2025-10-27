@@ -541,6 +541,56 @@ async def get_payment(payment_id: str):
     
     return payment
 
+@api_router.get("/payments/{payment_id}/status")
+async def check_payment_status(payment_id: str):
+    """Check payment status from both database and NOWPayments API"""
+    payment = await db.payments.find_one({"id": payment_id}, {"_id": 0})
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    
+    # Get latest status from NOWPayments if we have payment_id
+    nowpayments_status = None
+    if payment.get('payment_id'):
+        nowpayments_status = await nowpayments_client.get_payment_status(payment['payment_id'])
+        
+        # Update local status if changed
+        if nowpayments_status and nowpayments_status.get('payment_status'):
+            new_status = nowpayments_status['payment_status']
+            if new_status != payment['status']:
+                await db.payments.update_one(
+                    {"id": payment_id},
+                    {"$set": {
+                        "status": new_status,
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }}
+                )
+                payment['status'] = new_status
+                
+                # Activate plan if payment finished
+                if new_status in ["finished", "confirmed"]:
+                    tariff = await db.tariff_plans.find_one({"id": payment['plan_id']})
+                    if tariff:
+                        duration_days = 30 if payment['amount'] < tariff['price_annual'] else 365
+                        expires_at = datetime.now(timezone.utc) + timedelta(days=duration_days)
+                        
+                        await db.users.update_one(
+                            {"id": payment['user_id']},
+                            {"$set": {
+                                "current_plan_id": payment['plan_id'],
+                                "plan_expires_at": expires_at.isoformat()
+                            }}
+                        )
+    
+    return {
+        "payment_id": payment_id,
+        "status": payment['status'],
+        "amount": payment.get('amount'),
+        "pay_address": payment.get('pay_address'),
+        "pay_amount": payment.get('pay_amount'),
+        "pay_currency": payment.get('pay_currency'),
+        "nowpayments_data": nowpayments_status
+    }
+
 @api_router.post("/payments/webhook")
 async def payment_webhook(request: dict, background_tasks: BackgroundTasks):
     """Handle IPN callbacks from NOWPayments with signature verification"""
