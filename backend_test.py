@@ -1629,13 +1629,15 @@ class AnonVPNTester:
                 "Failed to update subscription via partner API", data)
         
         # Test 4: Test API Key Authentication (invalid key should fail)
-        invalid_headers = {
-            'X-API-Key': 'invalid_key_12345',
-            'X-Secret-Key': 'invalid_secret_12345'
+        invalid_user_data = {
+            "api_key": "invalid_key_12345",
+            "secret_key": "invalid_secret_12345",
+            "email": "invalid-test@test.com",
+            "plan_id": plan_id,
+            "plan_duration_days": 30
         }
         
-        success, data = await self.make_request('POST', '/partner/users',
-            json=user_data, headers=invalid_headers)
+        success, data = await self.make_request('POST', '/partner/users', params=invalid_user_data)
         
         if not success:
             error_msg = str(data).lower()
