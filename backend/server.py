@@ -228,14 +228,39 @@ class NOWPaymentsClient:
                 data = response.json()
                 logger.info(f"Payment created successfully: {data}")
                 return data
-            except httpx.HTTPError as e:
+            except httpx.HTTPStatusError as e:
                 logger.error(f"HTTP error creating payment: {str(e)}")
+                error_message = "Failed to create payment"
+                
                 if hasattr(e, 'response') and e.response is not None:
-                    logger.error(f"Response content: {e.response.text}")
-                raise HTTPException(status_code=500, detail=f"Failed to create payment: {str(e)}")
+                    try:
+                        error_data = e.response.json()
+                        logger.error(f"Response content: {error_data}")
+                        
+                        # Parse NOWPayments error messages
+                        if 'message' in error_data:
+                            api_message = error_data['message']
+                            
+                            # Handle specific error cases
+                            if 'minimum' in api_message.lower() or 'min' in api_message.lower():
+                                error_message = f"Payment amount too low for {pay_currency.upper()}. {api_message}"
+                            elif 'estimate' in api_message.lower() or 'usdt' in api_message.lower():
+                                error_message = f"Currency {pay_currency.upper()} temporarily unavailable. Please try a different cryptocurrency."
+                            elif 'invalid' in api_message.lower():
+                                error_message = f"Invalid payment details. {api_message}"
+                            else:
+                                error_message = api_message
+                    except:
+                        logger.error(f"Response text: {e.response.text}")
+                        error_message = f"Payment service error (status {e.response.status_code})"
+                
+                raise HTTPException(
+                    status_code=e.response.status_code if hasattr(e, 'response') else 500,
+                    detail=error_message
+                )
             except Exception as e:
                 logger.error(f"Unexpected error creating payment: {str(e)}")
-                raise HTTPException(status_code=500, detail=f"Failed to create payment: {str(e)}")
+                raise HTTPException(status_code=500, detail="Payment service temporarily unavailable. Please try again.")
     
     async def get_payment_status(self, payment_id: int) -> Dict:
         """Get payment status from NOWPayments"""
