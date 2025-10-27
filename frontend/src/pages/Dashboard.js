@@ -395,6 +395,16 @@ const Dashboard = ({ user }) => {
           </div>
         )}
       </div>
+
+      {/* Advanced Features Modal */}
+      <AdvancedFeaturesModal
+        isOpen={showAdvancedModal}
+        onClose={() => setShowAdvancedModal(false)}
+        server={advancedServer}
+        user={user}
+        userPlan={userPlan}
+        onConnectionCreated={handleAdvancedConnectionCreated}
+      />
     </div>
   );
 };
