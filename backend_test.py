@@ -1578,19 +1578,15 @@ class AnonVPNTester:
         plan_id = tariffs[0]['id']
         
         # Test 2: Create User via Partner API
-        partner_headers = {
-            'X-API-Key': api_key,
-            'X-Secret-Key': secret_key
-        }
-        
         user_data = {
+            "api_key": api_key,
+            "secret_key": secret_key,
             "email": "partner-user@test.com",
             "plan_id": plan_id,
             "plan_duration_days": 30
         }
         
-        success, data = await self.make_request('POST', '/partner/users', 
-            json=user_data, headers=partner_headers)
+        success, data = await self.make_request('POST', '/partner/users', params=user_data)
         
         if success and data.get('user_id'):
             partner_user_id = data['user_id']
