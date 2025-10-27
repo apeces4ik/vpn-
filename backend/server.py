@@ -18,6 +18,9 @@ import json
 import secrets
 import io
 
+# Import VPN config generator
+from vpn_config_generator import vpn_config_generator
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
