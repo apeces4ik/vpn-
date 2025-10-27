@@ -347,11 +347,11 @@ backend:
 
   - task: "Supported Protocols Endpoint"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -361,6 +361,14 @@ backend:
           - Includes description, performance, compatibility info
           - Marks WireGuard as recommended
           - Useful for frontend protocol selection UI
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ PROTOCOLS ENDPOINT WORKING
+          - Protocol listing: Successfully returns all 3 supported protocols
+          - Detailed info: Includes performance, compatibility, and descriptions
+          - Recommendations: WireGuard properly marked as recommended
+          - Frontend ready: Perfect for protocol selection UI
 
   - task: "Tariff Plans Initialization"
     implemented: true
