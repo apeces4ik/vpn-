@@ -439,28 +439,31 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: |
-      PHASE 1 IMPLEMENTATION COMPLETE - Ready for Backend Testing
+      PHASE 1.5 - PAYMENT ERROR FIXES
       
-      Implemented Features:
-      1. ✅ Production NOWPayments integration with real API key
-      2. ✅ Real-time payment status monitoring
-      3. ✅ Enhanced webhook handler with proper logging
-      4. ✅ VPN config generation for 3 protocols (WireGuard, OpenVPN, IKEv2)
-      5. ✅ Health check endpoint
-      6. ✅ Supported protocols endpoint
+      Fixed Issues:
+      1. ✅ Enhanced error handling for NOWPayments API
+      2. ✅ Added currency-specific minimum amount validation
+      3. ✅ Better error messages for USDT temporary unavailability
+      4. ✅ Added /api/payments/min-amount endpoint
+      5. ✅ Improved validation before payment creation
+      
+      Changes Made:
+      - Added get_minimum_payment_amount() method to NOWPaymentsClient
+      - Enhanced create_payment() error handling with specific error parsing
+      - Added pre-validation of payment amounts against currency minimums
+      - Better error messages for users (e.g., "Currency temporarily unavailable")
       
       Testing Requirements:
-      - Test NOWPayments API connectivity (/api/health)
-      - Test payment creation flow with different cryptocurrencies
-      - Test payment status checking endpoint
-      - Test VPN config generation for all protocols
-      - Verify database operations (users, tariffs, servers initialization)
+      - Test payment creation with BTC (Basic monthly plan - $14.24)
+      - Test payment creation with USDT (should show better error message)
+      - Test payment creation with other cryptocurrencies
+      - Verify minimum amount checking works correctly
+      - Test that error messages are user-friendly
       
       Backend URL: https://cryptovpn-3.preview.emergentagent.com/api
-      NOWPayments: Production mode with real API key
-      Database: MongoDB local (anonvpn_enterprise)
       
-      Please test all high-priority backend endpoints thoroughly.
+      Please test payment creation with various cryptocurrencies and verify error handling.
   - agent: "testing"
     message: |
       🎉 COMPREHENSIVE BACKEND TESTING COMPLETED - ALL SYSTEMS WORKING
