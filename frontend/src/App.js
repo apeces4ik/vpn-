@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard';
 import PaymentPage from './pages/PaymentPage';
 import AdminPanel from './pages/AdminPanel';
 import TeamDashboard from './pages/TeamDashboard';
+import ServerMonitor from './components/ServerMonitor';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
