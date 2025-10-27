@@ -812,7 +812,7 @@ class AnonVPNTester:
             "split_tunnel_rules": split_rules
         }
         
-        success, data = await self.make_request('POST', '/connections/advanced', params=split_tunnel_data)
+        success, data = await self.make_request('POST', '/connections/advanced', json=split_tunnel_data)
         
         if success and data.get('connection'):
             connection = data['connection']
