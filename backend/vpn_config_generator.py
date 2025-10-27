@@ -344,7 +344,7 @@ MIIE{base64.b64encode(secrets.token_bytes(300)).decode('utf-8')}
             # Generate keys for both hops
             client_private_key, client_public_key = WireGuardKeyPair.generate()
             entry_public_key = base64.b64encode(secrets.token_bytes(32)).decode('utf-8')
-            exit_public_key = base64.b64encode(secrets.token_bytes(32)).decode('utf-8')
+            # Note: In production, exit server key would be used for second hop configuration
             
             config = f"""[Interface]
 # Double VPN Configuration - Client Side
