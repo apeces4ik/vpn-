@@ -1,14 +1,17 @@
 .typing-effect {
   display: inline-block;
+  min-height: 1.2em;
 }
 
 .typing-cursor {
   display: inline-block;
-  width: 2px;
-  height: 1em;
+  width: 3px;
+  height: 0.9em;
   background: #00ff41;
   margin-left: 4px;
-  animation: blink 1s infinite;
+  animation: blink 1.1s step-end infinite;
+  box-shadow: 0 0 10px #00ff41, 0 0 20px #00ff41;
+  vertical-align: middle;
 }
 
 @keyframes blink {
