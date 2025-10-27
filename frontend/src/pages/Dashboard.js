@@ -106,23 +106,46 @@ const Dashboard = ({ user }) => {
     }
   };
 
-  const handleDownloadConfig = async (server) => {
+  const handleDownloadConfig = async (server, protocol = 'wireguard') => {
     try {
       const response = await axios.post(`${API}/connections/connect`, null, {
         params: {
           user_id: user.id,
           server_id: server.id,
-          device_name: 'Config Download'
+          device_name: 'Config Download',
+          protocol: protocol
         }
       });
 
-      const configUrl = `${API}/connections/${response.data.id}/config`;
+      const configUrl = `${API}/connections/${response.data.id}/config?protocol=${protocol}`;
       window.open(configUrl, '_blank');
+      toast.success(`${protocol.toUpperCase()} config downloaded`);
     } catch (error) {
       console.error('Failed to download config:', error);
       if (error.response?.status === 403) {
         navigate('/payment');
       }
+    }
+  };
+
+  const handleAdvancedConnect = (server) => {
+    setAdvancedServer(server);
+    setShowAdvancedModal(true);
+  };
+
+  const handleAdvancedConnectionCreated = async (connection) => {
+    setCurrentConnection(connection);
+    setIsConnected(true);
+    setSelectedServer(advancedServer);
+    
+    // Download the advanced config
+    try {
+      const configUrl = `${API}/connections/${connection.id}/advanced-config`;
+      window.open(configUrl, '_blank');
+      toast.success('Advanced connection created! Config downloaded.');
+    } catch (error) {
+      console.error('Failed to download advanced config:', error);
+      toast.error('Connection created but config download failed');
     }
   };
 
