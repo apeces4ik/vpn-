@@ -1,0 +1,123 @@
+.team-dashboard-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: white;
+  padding: 2rem;
+}
+
+.team-dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+/* Card styling overrides for dark theme */
+.team-dashboard-container .card {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.team-dashboard-container .card-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Tab styling */
+.team-dashboard-container [data-state="active"] {
+  background: rgba(59, 130, 246, 0.2);
+  border-bottom: 2px solid #3b82f6;
+}
+
+/* Input styling for dark theme */
+.team-dashboard-container input,
+.team-dashboard-container select {
+  background: rgba(17, 24, 39, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.team-dashboard-container input:focus,
+.team-dashboard-container select:focus {
+  border-color: #3b82f6;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.team-dashboard-container input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Button styling */
+.team-dashboard-container button {
+  transition: all 0.3s ease;
+}
+
+.team-dashboard-container button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.team-dashboard-container button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Badge styling */
+.team-dashboard-container .badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-weight: 600;
+}
+
+/* Alert styling */
+.team-dashboard-container .alert {
+  backdrop-filter: blur(10px);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .team-dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.team-dashboard-container > * {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Security event icons */
+.team-dashboard-container .security-event {
+  transition: all 0.2s ease;
+}
+
+.team-dashboard-container .security-event:hover {
+  background: rgba(59, 130, 246, 0.1);
+  transform: translateX(4px);
+}
