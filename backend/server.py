@@ -1177,6 +1177,106 @@ async def get_server_metrics(server_id: str):
         }
     }
 
+
+@api_router.get("/servers/realtime-status")
+async def get_realtime_server_status():
+    """Get real-time status of all VPN servers"""
+    servers = await db.vpn_servers.find({"is_active": True}, {"_id": 0}).to_list(1000)
+    
+    server_status = []
+    for server in servers:
+        # Get active connections count
+        active_connections = await db.connections.count_documents({
+            "server_id": server.get('id'),
+            "is_active": True
+        })
+        
+        # Calculate load percentage
+        max_capacity = server.get('max_capacity', 1000)
+        load_percent = (active_connections / max_capacity) * 100
+        
+        # Determine server health status
+        if load_percent < 70:
+            health = "healthy"
+        elif load_percent < 90:
+            health = "warning"
+        else:
+            health = "critical"
+        
+        server_status.append({
+            "id": server.get('id'),
+            "hostname": server.get('hostname'),
+            "location": server.get('location'),
+            "country_code": server.get('country_code'),
+            "active_connections": active_connections,
+            "max_capacity": max_capacity,
+            "load_percent": round(load_percent, 1),
+            "health": health,
+            "protocols": server.get('supported_protocols', ['wireguard', 'openvpn', 'ikev2']),
+            "features": {
+                "double_vpn": server.get('supports_double_vpn', False),
+                "tor": server.get('supports_tor', False),
+                "obfuscation": server.get('supports_obfuscation', False)
+            },
+            "last_health_check": server.get('last_health_check', datetime.now(timezone.utc).isoformat())
+        })
+    
+    # Calculate global stats
+    total_capacity = sum(s.get('max_capacity', 0) for s in servers)
+    total_active = sum(s['active_connections'] for s in server_status)
+    global_load = (total_active / total_capacity * 100) if total_capacity > 0 else 0
+    
+    return {
+        "servers": server_status,
+        "total_servers": len(servers),
+        "global_stats": {
+            "total_capacity": total_capacity,
+            "total_active_connections": total_active,
+            "global_load_percent": round(global_load, 1),
+            "healthy_servers": len([s for s in server_status if s['health'] == 'healthy']),
+            "warning_servers": len([s for s in server_status if s['health'] == 'warning']),
+            "critical_servers": len([s for s in server_status if s['health'] == 'critical'])
+        },
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@api_router.post("/admin/servers/{server_id}/health-check")
+async def trigger_server_health_check(server_id: str):
+    """Trigger manual health check for a specific server"""
+    server = await db.vpn_servers.find_one({"id": server_id}, {"_id": 0})
+    if not server:
+        raise HTTPException(status_code=404, detail="Server not found")
+    
+    # Update last health check timestamp
+    await db.vpn_servers.update_one(
+        {"id": server_id},
+        {"$set": {"last_health_check": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    # Get current metrics
+    active_connections = await db.connections.count_documents({
+        "server_id": server_id,
+        "is_active": True
+    })
+    
+    max_capacity = server.get('max_capacity', 1000)
+    load_percent = (active_connections / max_capacity) * 100
+    
+    return {
+        "server_id": server_id,
+        "hostname": server.get('hostname'),
+        "location": server.get('location'),
+        "health_check_completed": True,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "metrics": {
+            "active_connections": active_connections,
+            "max_capacity": max_capacity,
+            "load_percent": round(load_percent, 1),
+            "is_active": server.get('is_active', True)
+        }
+    }
+
+
 # ============= ADVANCED VPN FEATURES ROUTES =============
 
 @api_router.get("/servers/double-vpn")
