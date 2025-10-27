@@ -797,12 +797,31 @@
   animation: glow 2s ease-in-out infinite;
 }
 
+.gradient-text-bright {
+  background: linear-gradient(135deg, #00ff41 0%, #00ff41 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 1em;
+  filter: brightness(1.5) drop-shadow(0 0 30px rgba(0, 255, 65, 0.8));
+  animation: glowBright 2s ease-in-out infinite;
+}
+
 @keyframes glow {
   0%, 100% {
     filter: brightness(1) drop-shadow(0 0 20px rgba(0, 255, 65, 0.3));
   }
   50% {
     filter: brightness(1.2) drop-shadow(0 0 30px rgba(0, 255, 65, 0.5));
+  }
+}
+
+@keyframes glowBright {
+  0%, 100% {
+    filter: brightness(1.5) drop-shadow(0 0 30px rgba(0, 255, 65, 0.8));
+  }
+  50% {
+    filter: brightness(1.8) drop-shadow(0 0 40px rgba(0, 255, 65, 1));
   }
 }
 
