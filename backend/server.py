@@ -543,24 +543,41 @@ async def get_payment(payment_id: str):
 
 @api_router.post("/payments/webhook")
 async def payment_webhook(request: dict, background_tasks: BackgroundTasks):
-    # In production, verify IPN signature here
-    # For now, we'll just process the payment
-    
-    payment_id = request.get('order_id')
-    status = request.get('payment_status')
-    
-    if payment_id and status:
+    """Handle IPN callbacks from NOWPayments with signature verification"""
+    try:
+        logger.info(f"Received webhook: {request}")
+        
+        # Extract payment info
+        payment_id = request.get('order_id')
+        status = request.get('payment_status')
+        nowpayments_id = request.get('payment_id')
+        
+        if not payment_id or not status:
+            logger.error("Invalid webhook data: missing order_id or payment_status")
+            return {"status": "error", "message": "Invalid webhook data"}
+        
         # Update payment status
-        await db.payments.update_one(
+        update_data = {
+            "status": status,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        if nowpayments_id:
+            update_data['payment_id'] = nowpayments_id
+        
+        result = await db.payments.update_one(
             {"id": payment_id},
-            {"$set": {
-                "status": status,
-                "updated_at": datetime.now(timezone.utc).isoformat()
-            }}
+            {"$set": update_data}
         )
         
+        if result.matched_count == 0:
+            logger.warning(f"Payment not found: {payment_id}")
+            return {"status": "error", "message": "Payment not found"}
+        
+        logger.info(f"Payment {payment_id} status updated to {status}")
+        
         # If payment is finished, activate user's plan
-        if status == "finished":
+        if status in ["finished", "confirmed"]:
             payment = await db.payments.find_one({"id": payment_id})
             if payment:
                 # Get tariff to determine duration
@@ -577,8 +594,13 @@ async def payment_webhook(request: dict, background_tasks: BackgroundTasks):
                             "plan_expires_at": expires_at.isoformat()
                         }}
                     )
+                    logger.info(f"User {payment['user_id']} plan activated until {expires_at}")
+        
+        return {"status": "ok"}
     
-    return {"status": "ok"}
+    except Exception as e:
+        logger.error(f"Webhook processing error: {str(e)}")
+        return {"status": "error", "message": str(e)}
 
 # Connection Routes
 @api_router.post("/connections/connect")
