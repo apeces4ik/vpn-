@@ -372,11 +372,11 @@ backend:
 
   - task: "Tariff Plans Initialization"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -386,6 +386,14 @@ backend:
           - Pro plan ($19.99/month, 5 devices, advanced features)
           - Ultimate plan ($29.99/month, 10 devices, all features)
           - All plans include crypto discount
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ TARIFF PLANS WORKING
+          - Initialization: Successfully creates 3 default tariff plans
+          - Plan details: Basic, Pro, Ultimate with proper pricing and features
+          - Database storage: Plans properly stored and retrievable
+          - Crypto discount: 10% discount applied to all plans for crypto payments
 
   - task: "VPN Servers Initialization"
     implemented: true
