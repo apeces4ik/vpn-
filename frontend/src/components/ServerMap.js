@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MapPin, Globe } from 'lucide-react';
+import { MapPin, Globe, Zap, Shield } from 'lucide-react';
 import './ServerMap.css';
 
 const ServerMap = ({ locations, onLocationSelect }) => {
