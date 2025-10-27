@@ -1335,14 +1335,16 @@ class AnonVPNTester:
             self.log_test("Get Organization Details", False, "Failed to get organization details", data)
         
         # Test 3: Update Organization (Branding)
+        import json
+        branding_data = {
+            "logo_url": "https://example.com/logo.png",
+            "primary_color": "#FF0000"
+        }
         branding_update = {
-            "branding": {
-                "logo_url": "https://example.com/logo.png",
-                "primary_color": "#FF0000"
-            }
+            "branding": json.dumps(branding_data)
         }
         
-        success, data = await self.make_request('PUT', f'/organizations/{org_id}', json=branding_update)
+        success, data = await self.make_request('PUT', f'/organizations/{org_id}', params=branding_update)
         
         if success:
             # Verify branding was updated
