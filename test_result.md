@@ -997,11 +997,11 @@ backend:
 
   - task: "Team Member Management"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -1014,6 +1014,40 @@ backend:
           - Role-based access: owner, admin, manager, member
           - Team size limit validation
           - Automatic user creation/linking
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ TEAM MEMBER MANAGEMENT WORKING
+          
+          Comprehensive Testing Results:
+          
+          1. ✅ Add Team Member (POST /api/organizations/{org_id}/members):
+             - Successfully adds team members with email and role
+             - Automatic user creation if user doesn't exist
+             - Returns user_id and member_id for tracking
+             - Team member linking working correctly
+          
+          2. ✅ List Team Members (GET /api/organizations/{org_id}/members):
+             - Successfully retrieves all team members
+             - Shows owner and added members correctly
+             - Includes email, role, and status information
+             - Proper member count tracking
+          
+          3. ✅ Update Member Role (PUT /api/organizations/{org_id}/members/{member_id}):
+             - Successfully updates member roles (member → admin)
+             - Role changes properly persisted
+             - Access control working correctly
+          
+          4. ✅ Delete Team Member (DELETE /api/organizations/{org_id}/members/{member_id}):
+             - Successfully removes team members
+             - Member properly removed from organization
+             - Owner deletion protection working (cannot delete owner)
+          
+          5. ✅ Team Size Limits:
+             - Team size validation working (2/10 members within limit)
+             - Proper enforcement of max_team_members setting
+          
+          Team member management fully functional for corporate organizations.
 
   - task: "Security Monitoring & Team Dashboard"
     implemented: true
