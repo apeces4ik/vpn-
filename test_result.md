@@ -995,7 +995,7 @@ agent_communication:
       - Verify minimum amount checking works correctly
       - Test that error messages are user-friendly
       
-      Backend URL: https://vpn-features.preview.emergentagent.com/api
+      Backend URL: https://multi-user-mgmt.preview.emergentagent.com/api
       
       Please test payment creation with various cryptocurrencies and verify error handling.
   - agent: "testing"
@@ -1134,4 +1134,4 @@ agent_communication:
       - Verify server filtering by capabilities
       - Test split tunneling rule application
       
-      Backend URL: https://vpn-features.preview.emergentagent.com/api
+      Backend URL: https://multi-user-mgmt.preview.emergentagent.com/api
