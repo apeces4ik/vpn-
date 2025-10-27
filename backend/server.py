@@ -425,7 +425,7 @@ async def init_tariffs():
             special_features=[],
             price_monthly=19.99,
             price_annual=199.99,
-            crypto_discount=0.05
+            crypto_discount=0.0
         ),
         TariffPlan(
             name="Pro",
@@ -434,7 +434,7 @@ async def init_tariffs():
             special_features=["double_vpn", "obfuscation"],
             price_monthly=39.99,
             price_annual=399.99,
-            crypto_discount=0.10
+            crypto_discount=0.0
         ),
         TariffPlan(
             name="Ultimate",
@@ -443,7 +443,7 @@ async def init_tariffs():
             special_features=["double_vpn", "obfuscation", "tor_over_vpn", "dedicated_ip"],
             price_monthly=59.99,
             price_annual=599.99,
-            crypto_discount=0.15
+            crypto_discount=0.0
         )
     ]
     
