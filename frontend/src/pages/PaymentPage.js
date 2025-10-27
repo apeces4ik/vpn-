@@ -397,7 +397,7 @@ const PaymentPage = ({ user, setUser }) => {
             </div>
             
             <div className="crypto-recommendations" style={{marginTop: '1rem', fontSize: '0.9rem', color: '#888'}}>
-              <p><strong>Recommended for monthly plans:</strong> ETH, LTC, USDT, USDC</p>
+              <p><strong>Recommended for monthly plans:</strong> ETH, LTC, SOL, USDC</p>
               <p><strong>Best for privacy:</strong> XMR (Monero)</p>
             </div>
           </div>
