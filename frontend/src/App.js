@@ -77,6 +77,7 @@ function App() {
           />
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/team" element={<TeamDashboard />} />
+          <Route path="/monitor" element={<ServerMonitor />} />
         </Routes>
       </BrowserRouter>
     </div>
