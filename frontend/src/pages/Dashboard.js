@@ -17,11 +17,17 @@ const Dashboard = ({ user }) => {
   const [selectedServer, setSelectedServer] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [currentConnection, setCurrentConnection] = useState(null);
+  const [connectionHistory, setConnectionHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userPlan, setUserPlan] = useState(null);
 
   useEffect(() => {
     fetchData();
+    // Fetch connection history every 30 seconds
+    const interval = setInterval(() => {
+      fetchConnectionHistory();
+    }, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchData = async () => {
