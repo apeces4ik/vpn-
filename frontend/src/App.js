@@ -33,11 +33,11 @@ function App() {
     setLoading(false);
   }, []);
 
-  const createUser = async (email = null) => {
+  const createUser = async (walletAddress = null, isWalletLogin = false) => {
     try {
-      const response = await axios.post(`${API}/users`, null, {
-        params: { email }
-      });
+      const requestData = isWalletLogin ? { wallet_address: walletAddress } : { email: walletAddress };
+      
+      const response = await axios.post(`${API}/users`, requestData);
       const userData = response.data;
       localStorage.setItem('anonvpn_user', JSON.stringify(userData));
       setUser(userData);
