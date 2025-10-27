@@ -424,11 +424,11 @@ backend:
 
   - task: "Enhanced Payment Error Handling"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -453,6 +453,57 @@ backend:
           - Better error parsing and user-friendly messages
           - Currency-specific minimum amount checking
           - Graceful handling of NOWPayments API temporary issues
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ ENHANCED PAYMENT ERROR HANDLING FULLY WORKING
+          
+          Comprehensive Testing Results:
+          
+          1. ✅ Minimum Amount Endpoint (/api/payments/min-amount):
+             - BTC: $19.20 minimum amount correctly returned
+             - USDT: $19.20 minimum amount correctly returned  
+             - LTC, XMR, ETH, USDC: All working correctly
+          
+          2. ✅ BTC Monthly Payment (User Reported Issue):
+             - Expected behavior: Returns clear error message
+             - Result: "Payment amount $14.24 is below minimum $19.20 for BTC. Please choose annual billing or a higher tier plan."
+             - Status: FIXED - User-friendly error message instead of 400 Bad Request
+          
+          3. ✅ USDT Monthly Payment (User Reported Issue):
+             - Expected behavior: Returns clear error message instead of 500 Internal Server Error
+             - Result: "Payment amount $14.24 is below minimum $19.20 for USDT. Please choose annual billing or a higher tier plan."
+             - Status: FIXED - Graceful error handling implemented
+          
+          4. ✅ BTC Annual Payment:
+             - Successfully created payment with real BTC address: 373USdfnoNA6FpZDeGXJ...
+             - Amount: 0.00126468 BTC for $142.49 annual Basic plan
+             - Status: WORKING PERFECTLY
+          
+          5. ✅ Other Cryptocurrencies (LTC, XMR, ETH, USDC):
+             - All successfully create annual payments
+             - Real cryptocurrency addresses generated
+             - Proper minimum amount validation working
+          
+          6. ✅ Error Message Quality:
+             - Invalid currency: Clear "pay_currency must only contain alpha-numeric characters" message
+             - Missing parameters: Proper validation with detailed field requirements
+             - All error messages are user-friendly and informative
+          
+          7. ✅ Production NOWPayments Integration:
+             - Real payment IDs generated (5760967511, 5005976405, etc.)
+             - Real cryptocurrency addresses provided
+             - Proper webhook handling working
+             - All 254 supported currencies available
+          
+          CRITICAL FIXES VERIFIED:
+          - ✅ BTC monthly payment: 400 Bad Request → Clear minimum amount error
+          - ✅ USDT payments: 500 Internal Server Error → Graceful error handling
+          - ✅ All cryptocurrencies working with annual plans
+          - ✅ Minimum amount validation preventing user confusion
+          - ✅ User-friendly error messages throughout
+          
+          The enhanced payment error handling system is fully functional and addresses all reported user issues.
 
 metadata:
   created_by: "main_agent"
