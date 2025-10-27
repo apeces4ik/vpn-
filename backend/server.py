@@ -1023,6 +1023,58 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.on_event("startup")
+async def startup_db_init():
+    """Initialize default data on startup"""
+    try:
+        # Initialize tariff plans if none exist
+        tariff_count = await db.tariff_plans.count_documents({})
+        if tariff_count == 0:
+            logger.info("Initializing default tariff plans...")
+            default_tariffs = [
+                TariffPlan(
+                    name="Basic",
+                    device_limit=3,
+                    speed_tier="1Gbps",
+                    special_features=[],
+                    price_monthly=14.99,
+                    price_annual=149.99,
+                    crypto_discount=0.05
+                ),
+                TariffPlan(
+                    name="Pro",
+                    device_limit=5,
+                    speed_tier="10Gbps",
+                    special_features=["double_vpn", "obfuscation"],
+                    price_monthly=24.99,
+                    price_annual=249.99,
+                    crypto_discount=0.10
+                ),
+                TariffPlan(
+                    name="Ultimate",
+                    device_limit=10,
+                    speed_tier="10Gbps",
+                    special_features=["double_vpn", "obfuscation", "tor_over_vpn", "dedicated_ip"],
+                    price_monthly=39.99,
+                    price_annual=399.99,
+                    crypto_discount=0.15
+                )
+            ]
+            for tariff in default_tariffs:
+                doc = tariff.model_dump()
+                doc['created_at'] = doc['created_at'].isoformat()
+                await db.tariff_plans.insert_one(doc)
+            logger.info(f"✅ Initialized {len(default_tariffs)} tariff plans")
+        
+        # Initialize VPN servers if none exist
+        server_count = await db.vpn_servers.count_documents({})
+        if server_count == 0:
+            logger.info("Initializing VPN servers...")
+            # (Server list would be here - using init endpoint for now)
+            logger.info("ℹ️ Use /api/servers/init endpoint to initialize servers")
+    except Exception as e:
+        logger.error(f"Error during startup initialization: {str(e)}")
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
