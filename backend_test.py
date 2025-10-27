@@ -1697,16 +1697,18 @@ class AnonVPNTester:
         org_id = self.test_data['org_id']
         
         # Test comprehensive branding update
+        import json
+        branding_obj = {
+            "logo_url": "https://example.com/custom-logo.png",
+            "primary_color": "#1E40AF",
+            "secondary_color": "#F59E0B",
+            "custom_domain": "vpn.testcorp.com"
+        }
         branding_data = {
-            "branding": {
-                "logo_url": "https://example.com/custom-logo.png",
-                "primary_color": "#1E40AF",
-                "secondary_color": "#F59E0B",
-                "custom_domain": "vpn.testcorp.com"
-            }
+            "branding": json.dumps(branding_obj)
         }
         
-        success, data = await self.make_request('PUT', f'/organizations/{org_id}', json=branding_data)
+        success, data = await self.make_request('PUT', f'/organizations/{org_id}', params=branding_data)
         
         if success:
             # Verify all branding fields were updated
