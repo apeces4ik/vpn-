@@ -429,17 +429,10 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus:
-    - "NOWPayments API Integration - Production Mode"
-    - "Payment Status Real-time Monitoring"
-    - "Enhanced Payment Webhook Handler"
-    - "VPN Config Generator - WireGuard"
-    - "VPN Config Generator - OpenVPN"
-    - "VPN Config Generator - IKEv2"
-    - "Enhanced Config Download Endpoint"
+  current_focus: []
   stuck_tasks: []
-  test_all: true
-  test_priority: "high_first"
+  test_all: false
+  test_priority: "completed"
 
 agent_communication:
   - agent: "main"
