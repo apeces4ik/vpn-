@@ -167,7 +167,7 @@ class AnonVPNTester:
             # Test price estimation
             if 'btc' in currencies:
                 success, estimate_data = await self.make_request('POST', '/payments/estimate', 
-                    json={"amount": 9.99, "currency_from": "usd", "currency_to": "btc"})
+                    params={"amount": 9.99, "currency_from": "usd", "currency_to": "btc"})
                 
                 if success and estimate_data.get('estimated_amount'):
                     self.log_test("Price Estimation", True, f"BTC estimate: {estimate_data['estimated_amount']}")
