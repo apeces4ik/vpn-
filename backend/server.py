@@ -1103,6 +1103,350 @@ async def get_server_metrics(server_id: str):
         }
     }
 
+# ============= ADVANCED VPN FEATURES ROUTES =============
+
+@api_router.get("/servers/double-vpn")
+async def get_double_vpn_servers():
+    """Get available server pairs for Double VPN"""
+    servers = await db.vpn_servers.find({
+        "is_active": True,
+        "supports_double_vpn": True
+    }, {"_id": 0}).to_list(1000)
+    
+    # Group by region for better pairing
+    regions = {}
+    for server in servers:
+        region = server.get("location", "Unknown").split(",")[0].strip()
+        if region not in regions:
+            regions[region] = []
+        regions[region].append(server)
+    
+    # Create recommended server pairs
+    pairs = []
+    region_names = list(regions.keys())
+    
+    for i, entry_region in enumerate(region_names):
+        for exit_region in region_names[i+1:]:
+            if entry_region != exit_region:
+                for entry_server in regions[entry_region][:2]:  # Top 2 servers per region
+                    for exit_server in regions[exit_region][:2]:
+                        pairs.append({
+                            "entry_server": {
+                                "id": entry_server["id"],
+                                "location": entry_server["location"],
+                                "country_code": entry_server["country_code"],
+                                "ip": entry_server["ipv4_address"]
+                            },
+                            "exit_server": {
+                                "id": exit_server["id"],
+                                "location": exit_server["location"],
+                                "country_code": exit_server["country_code"],
+                                "ip": exit_server["ipv4_address"]
+                            },
+                            "route": f"{entry_region} → {exit_region}",
+                            "recommended": True
+                        })
+    
+    return {
+        "total_servers": len(servers),
+        "available_pairs": len(pairs),
+        "pairs": pairs[:50],  # Limit to top 50 pairs
+        "all_servers": servers
+    }
+
+@api_router.get("/servers/tor-enabled")
+async def get_tor_enabled_servers():
+    """Get servers with Tor integration"""
+    servers = await db.vpn_servers.find({
+        "is_active": True,
+        "supports_tor": True
+    }, {"_id": 0}).to_list(1000)
+    
+    return {
+        "total_tor_servers": len(servers),
+        "servers": servers,
+        "info": "These servers route traffic through Tor network for maximum anonymity"
+    }
+
+@api_router.get("/servers/obfuscated")
+async def get_obfuscated_servers():
+    """Get servers with obfuscation support"""
+    servers = await db.vpn_servers.find({
+        "is_active": True,
+        "supports_obfuscation": True
+    }, {"_id": 0}).to_list(1000)
+    
+    return {
+        "total_obfuscated_servers": len(servers),
+        "servers": servers,
+        "info": "These servers support obfs4 to bypass VPN detection and censorship"
+    }
+
+@api_router.post("/connections/advanced")
+async def create_advanced_connection(
+    user_id: str,
+    server_id: str,
+    device_name: str,
+    protocol: str = "WireGuard",
+    enable_double_vpn: bool = False,
+    exit_server_id: Optional[str] = None,
+    enable_obfuscation: bool = False,
+    enable_tor: bool = False,
+    split_tunnel_rules: List[Dict[str, str]] = []
+):
+    """Create an advanced VPN connection with special features"""
+    
+    # Validate user
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if user has active plan
+    if not user.get("current_plan_id"):
+        raise HTTPException(status_code=403, detail="No active VPN plan")
+    
+    # Get user's plan to check feature access
+    plan = await db.tariff_plans.find_one({"id": user.get("current_plan_id")}, {"_id": 0})
+    if not plan:
+        raise HTTPException(status_code=403, detail="Invalid VPN plan")
+    
+    special_features = plan.get("special_features", [])
+    
+    # Validate feature access
+    if enable_double_vpn and "double_vpn" not in special_features:
+        raise HTTPException(
+            status_code=403,
+            detail="Double VPN requires Pro or Ultimate plan"
+        )
+    
+    if enable_obfuscation and "obfuscation" not in special_features:
+        raise HTTPException(
+            status_code=403,
+            detail="Obfuscation requires Pro or Ultimate plan"
+        )
+    
+    if enable_tor and "tor_over_vpn" not in special_features:
+        raise HTTPException(
+            status_code=403,
+            detail="Tor-over-VPN requires Ultimate plan"
+        )
+    
+    # Validate servers
+    server = await db.vpn_servers.find_one({"id": server_id, "is_active": True}, {"_id": 0})
+    if not server:
+        raise HTTPException(status_code=404, detail="Server not found or inactive")
+    
+    if enable_double_vpn:
+        if not exit_server_id:
+            raise HTTPException(status_code=400, detail="Exit server required for Double VPN")
+        exit_server = await db.vpn_servers.find_one({"id": exit_server_id, "is_active": True}, {"_id": 0})
+        if not exit_server:
+            raise HTTPException(status_code=404, detail="Exit server not found or inactive")
+    
+    if enable_tor and not server.get("supports_tor"):
+        raise HTTPException(status_code=400, detail="Selected server doesn't support Tor")
+    
+    if enable_obfuscation and not server.get("supports_obfuscation"):
+        raise HTTPException(status_code=400, detail="Selected server doesn't support obfuscation")
+    
+    # Create connection
+    connection = Connection(
+        user_id=user_id,
+        server_id=server_id,
+        device_name=device_name,
+        protocol=protocol,
+        enable_double_vpn=enable_double_vpn,
+        exit_server_id=exit_server_id,
+        enable_obfuscation=enable_obfuscation,
+        enable_tor=enable_tor,
+        split_tunnel_rules=[SplitTunnelRule(**rule) for rule in split_tunnel_rules]
+    )
+    
+    # Save to database
+    doc = connection.model_dump()
+    doc['connected_at'] = doc['connected_at'].isoformat()
+    if doc.get('disconnected_at'):
+        doc['disconnected_at'] = doc['disconnected_at'].isoformat()
+    
+    await db.connections.insert_one(doc)
+    
+    # Update server connection count
+    await db.vpn_servers.update_one(
+        {"id": server_id},
+        {"$inc": {"current_connections": 1}}
+    )
+    
+    features_enabled = []
+    if enable_double_vpn:
+        features_enabled.append("Double VPN")
+    if enable_obfuscation:
+        features_enabled.append("Obfuscation")
+    if enable_tor:
+        features_enabled.append("Tor-over-VPN")
+    if split_tunnel_rules:
+        features_enabled.append(f"Split Tunneling ({len(split_tunnel_rules)} rules)")
+    
+    return {
+        "connection": connection.model_dump(),
+        "message": f"Advanced connection created with: {', '.join(features_enabled) if features_enabled else 'standard features'}",
+        "config_url": f"/api/connections/{connection.id}/advanced-config"
+    }
+
+@api_router.get("/connections/{connection_id}/advanced-config")
+async def get_advanced_vpn_config(connection_id: str):
+    """Get VPN configuration with advanced features"""
+    
+    connection = await db.connections.find_one({"id": connection_id}, {"_id": 0})
+    if not connection:
+        raise HTTPException(status_code=404, detail="Connection not found")
+    
+    if not connection.get("is_active"):
+        raise HTTPException(status_code=400, detail="Connection is not active")
+    
+    # Get server info
+    server = await db.vpn_servers.find_one({"id": connection["server_id"]}, {"_id": 0})
+    if not server:
+        raise HTTPException(status_code=404, detail="Server not found")
+    
+    protocol = connection.get("protocol", "WireGuard").lower()
+    
+    # Handle different advanced features
+    if connection.get("enable_double_vpn") and connection.get("exit_server_id"):
+        exit_server = await db.vpn_servers.find_one({"id": connection["exit_server_id"]}, {"_id": 0})
+        if not exit_server:
+            raise HTTPException(status_code=404, detail="Exit server not found")
+        
+        config_data = vpn_config_generator.generate_double_vpn_config(
+            entry_server_ip=server["ipv4_address"],
+            exit_server_ip=exit_server["ipv4_address"],
+            entry_location=server["location"],
+            exit_location=exit_server["location"],
+            user_id=connection["user_id"],
+            connection_id=connection_id,
+            protocol=protocol.capitalize()
+        )
+    
+    elif connection.get("enable_obfuscation"):
+        config_data = vpn_config_generator.generate_obfuscated_config(
+            server_ip=server["ipv4_address"],
+            server_location=server["location"],
+            user_id=connection["user_id"],
+            connection_id=connection_id,
+            obfs4_port=server.get("obfs4_port", 9001)
+        )
+    
+    elif connection.get("enable_tor"):
+        config_data = vpn_config_generator.generate_tor_over_vpn_config(
+            server_ip=server["ipv4_address"],
+            server_location=server["location"],
+            user_id=connection["user_id"],
+            connection_id=connection_id,
+            tor_socks_port=server.get("tor_socks_port", 9050),
+            protocol=protocol.capitalize()
+        )
+    
+    else:
+        # Standard config with split tunneling
+        if protocol == "wireguard":
+            config_data = vpn_config_generator.generate_wireguard_config(
+                server_ip=server["ipv4_address"],
+                server_location=server["location"],
+                server_country=server.get("country_code", "XX"),
+                user_id=connection["user_id"],
+                connection_id=connection_id
+            )
+        elif protocol == "openvpn":
+            config_data = vpn_config_generator.generate_openvpn_config(
+                server_ip=server["ipv4_address"],
+                server_location=server["location"],
+                server_country=server.get("country_code", "XX"),
+                user_id=connection["user_id"],
+                connection_id=connection_id
+            )
+        else:
+            raise HTTPException(status_code=400, detail=f"Unsupported protocol: {protocol}")
+    
+    # Apply split tunneling if rules exist
+    if connection.get("split_tunnel_rules"):
+        config_data["config"] = vpn_config_generator.add_split_tunneling(
+            base_config=config_data["config"],
+            rules=connection["split_tunnel_rules"],
+            protocol=protocol.capitalize()
+        )
+    
+    # Return as downloadable file
+    filename = config_data.get("filename", f"anonvpn-{connection_id}.conf")
+    config_content = config_data["config"]
+    
+    return StreamingResponse(
+        io.BytesIO(config_content.encode('utf-8')),
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
+@api_router.get("/features/advanced")
+async def get_advanced_features():
+    """Get information about advanced VPN features"""
+    return {
+        "features": [
+            {
+                "id": "double_vpn",
+                "name": "Double VPN",
+                "description": "Routes traffic through two VPN servers for extra security",
+                "benefits": [
+                    "Double encryption layer",
+                    "Harder to trace real IP",
+                    "Enhanced privacy protection"
+                ],
+                "requirements": ["Pro or Ultimate plan"],
+                "protocols": ["WireGuard", "OpenVPN"],
+                "icon": "🔐"
+            },
+            {
+                "id": "obfuscation",
+                "name": "Obfuscation (obfs4)",
+                "description": "Disguises VPN traffic as regular HTTPS to bypass detection",
+                "benefits": [
+                    "Bypass VPN blocks",
+                    "Defeat Deep Packet Inspection (DPI)",
+                    "Work in restrictive networks"
+                ],
+                "requirements": ["Pro or Ultimate plan"],
+                "protocols": ["OpenVPN"],
+                "icon": "🎭"
+            },
+            {
+                "id": "tor_over_vpn",
+                "name": "Tor-over-VPN",
+                "description": "Routes traffic through VPN first, then Tor network",
+                "benefits": [
+                    "Hide Tor usage from ISP",
+                    "Access .onion sites",
+                    "Maximum anonymity"
+                ],
+                "requirements": ["Ultimate plan"],
+                "protocols": ["WireGuard", "OpenVPN"],
+                "icon": "🧅"
+            },
+            {
+                "id": "split_tunneling",
+                "name": "Split Tunneling",
+                "description": "Choose which apps/domains use VPN and which don't",
+                "benefits": [
+                    "Better performance for local services",
+                    "Selective routing",
+                    "Flexibility and control"
+                ],
+                "requirements": ["All plans"],
+                "protocols": ["WireGuard", "OpenVPN"],
+                "icon": "🔀"
+            }
+        ],
+        "total_features": 4
+    }
+
 # Include router
 app.include_router(api_router)
 
