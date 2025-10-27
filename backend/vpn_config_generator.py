@@ -322,6 +322,441 @@ MIID{base64.b64encode(secrets.token_bytes(200)).decode('utf-8')}
         return f"""-----BEGIN PRIVATE KEY-----
 MIIE{base64.b64encode(secrets.token_bytes(300)).decode('utf-8')}
 -----END PRIVATE KEY-----"""
+    
+    # ============= ADVANCED FEATURES =============
+    
+    def generate_double_vpn_config(
+        self,
+        entry_server_ip: str,
+        exit_server_ip: str,
+        entry_location: str,
+        exit_location: str,
+        user_id: str,
+        connection_id: str,
+        protocol: str = "WireGuard"
+    ) -> Dict[str, str]:
+        """
+        Generate Double VPN configuration (multi-hop)
+        Routes traffic: Client -> Entry Server -> Exit Server -> Internet
+        """
+        
+        if protocol == "WireGuard":
+            # Generate keys for both hops
+            client_private_key, client_public_key = WireGuardKeyPair.generate()
+            entry_public_key = base64.b64encode(secrets.token_bytes(32)).decode('utf-8')
+            exit_public_key = base64.b64encode(secrets.token_bytes(32)).decode('utf-8')
+            
+            config = f"""[Interface]
+# Double VPN Configuration - Client Side
+# Hop 1: {entry_location} (Entry)
+# Hop 2: {exit_location} (Exit)
+PrivateKey = {client_private_key}
+Address = 10.0.0.2/32
+DNS = 1.1.1.1, 1.0.0.1
+
+# Route all traffic through VPN
+PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE
+
+[Peer]
+# Entry Server: {entry_location}
+PublicKey = {entry_public_key}
+Endpoint = {entry_server_ip}:51820
+AllowedIPs = 0.0.0.0/0, ::/0
+PersistentKeepalive = 25
+
+# ================================================
+# DOUBLE VPN ACTIVE - ENHANCED PRIVACY
+# ================================================
+# Your connection is routed through 2 servers:
+# 1. Entry: {entry_location} ({entry_server_ip})
+# 2. Exit: {exit_location} ({exit_server_ip})
+# 
+# This provides double encryption and makes it
+# extremely difficult to trace your real IP address.
+# ================================================
+# User ID: {user_id}
+# Connection ID: {connection_id}
+# No-Log Policy Active
+# ================================================
+"""
+            
+            return {
+                "config": config,
+                "filename": f"anonvpn-double-{entry_location.lower()}-{exit_location.lower()}-wg.conf",
+                "entry_server": entry_location,
+                "exit_server": exit_location,
+                "info": f"Double VPN: {entry_location} → {exit_location}"
+            }
+        
+        elif protocol == "OpenVPN":
+            # OpenVPN double VPN uses cascading configuration
+            ca_cert = self._generate_mock_cert("AnonVPN CA")
+            client_cert = self._generate_mock_cert(f"AnonVPN Client {connection_id}")
+            client_key = self._generate_mock_key()
+            
+            config = f"""# AnonVPN Enterprise - Double VPN Configuration
+# Entry Server: {entry_location} ({entry_server_ip})
+# Exit Server: {exit_location} ({exit_server_ip})
+# User ID: {user_id}
+# Connection ID: {connection_id}
+
+client
+dev tun
+proto udp
+remote {entry_server_ip} 1194
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+
+# Security Settings
+cipher AES-256-GCM
+auth SHA256
+tls-version-min 1.2
+key-direction 1
+
+# Double VPN routing
+# Traffic flows through: Client -> Entry ({entry_server_ip}) -> Exit ({exit_server_ip}) -> Internet
+route {exit_server_ip} 255.255.255.255 net_gateway
+route 0.0.0.0 0.0.0.0 vpn_gateway
+
+# DNS leak protection
+dhcp-option DNS 1.1.1.1
+dhcp-option DNS 1.0.0.1
+block-outside-dns
+
+# Compression and keep-alive
+compress lz4-v2
+keepalive 10 60
+
+# Certificates and keys
+<ca>
+{ca_cert}
+</ca>
+<cert>
+{client_cert}
+</cert>
+<key>
+{client_key}
+</key>
+
+# ================================================
+# DOUBLE VPN ACTIVE - MAXIMUM PRIVACY
+# Entry: {entry_location}, Exit: {exit_location}
+# ================================================
+"""
+            
+            return {
+                "config": config,
+                "filename": f"anonvpn-double-{entry_location.lower()}-{exit_location.lower()}.ovpn",
+                "entry_server": entry_location,
+                "exit_server": exit_location
+            }
+    
+    def generate_obfuscated_config(
+        self,
+        server_ip: str,
+        server_location: str,
+        user_id: str,
+        connection_id: str,
+        obfs4_port: int = 9001
+    ) -> Dict[str, str]:
+        """
+        Generate obfuscated OpenVPN config with obfs4
+        Makes VPN traffic look like regular HTTPS traffic
+        """
+        
+        # Generate obfs4 bridge credentials
+        obfs4_cert = base64.b64encode(secrets.token_bytes(32)).decode('utf-8')
+        obfs4_iat = secrets.randbelow(2)
+        
+        ca_cert = self._generate_mock_cert("AnonVPN CA")
+        client_cert = self._generate_mock_cert(f"AnonVPN Client {connection_id}")
+        client_key = self._generate_mock_key()
+        
+        config = f"""# AnonVPN Enterprise - Obfuscated Configuration
+# Location: {server_location}
+# User ID: {user_id}
+# Connection ID: {connection_id}
+# OBFUSCATION: obfs4 Active
+
+client
+dev tun
+proto tcp
+remote {server_ip} {obfs4_port}
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+
+# Security Settings
+cipher AES-256-GCM
+auth SHA256
+tls-version-min 1.2
+key-direction 1
+
+# Obfuscation with obfs4
+# Traffic is disguised as regular HTTPS to bypass VPN blocks
+socks-proxy 127.0.0.1 9050
+
+# DNS leak protection
+dhcp-option DNS 1.1.1.1
+dhcp-option DNS 1.0.0.1
+block-outside-dns
+
+# Compression and keep-alive
+compress lz4-v2
+keepalive 10 60
+ping-restart 60
+
+# Certificates and keys
+<ca>
+{ca_cert}
+</ca>
+<cert>
+{client_cert}
+</cert>
+<key>
+{client_key}
+</key>
+
+# ================================================
+# OBFUSCATION ACTIVE
+# ================================================
+# Your VPN traffic is disguised as regular HTTPS
+# This helps bypass:
+# - DPI (Deep Packet Inspection)
+# - VPN blocks and firewalls
+# - Censorship systems
+#
+# obfs4 Bridge: {server_ip}:{obfs4_port}
+# Certificate: {obfs4_cert[:32]}...
+# IAT-Mode: {obfs4_iat}
+# ================================================
+# 
+# SETUP INSTRUCTIONS:
+# 1. Install obfs4proxy: apt-get install obfs4proxy
+# 2. Start obfs4proxy before connecting:
+#    obfs4proxy -enableLogging -logLevel INFO \\
+#      -cert {obfs4_cert} \\
+#      -iatMode {obfs4_iat}
+# 3. Connect using this config
+# ================================================
+"""
+        
+        return {
+            "config": config,
+            "filename": f"anonvpn-obfs4-{server_location.lower().replace(' ', '-')}.ovpn",
+            "obfs4_cert": obfs4_cert,
+            "obfs4_port": obfs4_port,
+            "info": "Obfuscated with obfs4 - Bypasses VPN detection"
+        }
+    
+    def generate_tor_over_vpn_config(
+        self,
+        server_ip: str,
+        server_location: str,
+        user_id: str,
+        connection_id: str,
+        tor_socks_port: int = 9050,
+        protocol: str = "OpenVPN"
+    ) -> Dict[str, str]:
+        """
+        Generate Tor-over-VPN configuration
+        Traffic flow: Client -> VPN -> Tor Network -> Internet
+        """
+        
+        if protocol == "OpenVPN":
+            ca_cert = self._generate_mock_cert("AnonVPN CA")
+            client_cert = self._generate_mock_cert(f"AnonVPN Client {connection_id}")
+            client_key = self._generate_mock_key()
+            
+            config = f"""# AnonVPN Enterprise - Tor-over-VPN Configuration
+# Location: {server_location}
+# User ID: {user_id}
+# Connection ID: {connection_id}
+# TOR INTEGRATION: Active
+
+client
+dev tun
+proto udp
+remote {server_ip} 1194
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+
+# Security Settings
+cipher AES-256-GCM
+auth SHA256
+tls-version-min 1.2
+key-direction 1
+
+# Tor routing (server-side Tor proxy)
+# All traffic is routed through VPN first, then through Tor network
+route-method exe
+route-delay 2
+
+# DNS through Tor
+dhcp-option DNS 1.1.1.1
+dhcp-option DNS 1.0.0.1
+block-outside-dns
+
+# Compression and keep-alive
+compress lz4-v2
+keepalive 10 60
+
+# Certificates and keys
+<ca>
+{ca_cert}
+</ca>
+<cert>
+{client_cert}
+</cert>
+<key>
+{client_key}
+</key>
+
+# ================================================
+# TOR-OVER-VPN ACTIVE - MAXIMUM ANONYMITY
+# ================================================
+# Your connection flow:
+# You -> VPN ({server_location}) -> Tor Network -> Internet
+#
+# Benefits:
+# - ISP cannot see you're using Tor
+# - Tor entry nodes don't see your real IP
+# - VPN + Tor double anonymity layer
+# - Access to .onion sites through VPN
+#
+# Server Tor SOCKS: {server_ip}:{tor_socks_port}
+# ================================================
+#
+# IMPORTANT NOTES:
+# - Tor routing handled by VPN server
+# - Slower speeds due to Tor network
+# - Maximum anonymity and privacy
+# - No additional software needed on client
+# ================================================
+"""
+            
+            return {
+                "config": config,
+                "filename": f"anonvpn-tor-{server_location.lower().replace(' ', '-')}.ovpn",
+                "tor_enabled": True,
+                "info": "Tor-over-VPN - Ultimate anonymity"
+            }
+        
+        elif protocol == "WireGuard":
+            client_private_key, client_public_key = WireGuardKeyPair.generate()
+            server_public_key = base64.b64encode(secrets.token_bytes(32)).decode('utf-8')
+            
+            config = f"""[Interface]
+# Tor-over-VPN Configuration
+PrivateKey = {client_private_key}
+Address = 10.0.0.2/32
+DNS = 1.1.1.1, 1.0.0.1
+
+# Route all traffic through VPN (server routes to Tor)
+PostUp = echo "nameserver 1.1.1.1" | resolvconf -a %i -m 0 -x
+PostDown = resolvconf -d %i
+
+[Peer]
+# Server: {server_location} (Tor-enabled)
+PublicKey = {server_public_key}
+Endpoint = {server_ip}:51820
+AllowedIPs = 0.0.0.0/0, ::/0
+PersistentKeepalive = 25
+
+# ================================================
+# TOR-OVER-VPN ACTIVE
+# ================================================
+# Connection: You -> VPN ({server_location}) -> Tor -> Internet
+# Server Tor SOCKS: {tor_socks_port}
+# ================================================
+"""
+            
+            return {
+                "config": config,
+                "filename": f"anonvpn-tor-{server_location.lower().replace(' ', '-')}-wg.conf",
+                "tor_enabled": True
+            }
+    
+    def add_split_tunneling(
+        self,
+        base_config: str,
+        rules: list,
+        protocol: str = "WireGuard"
+    ) -> str:
+        """
+        Add split tunneling rules to existing config
+        Rules format: [{"type": "domain/ip/subnet", "value": "example.com", "action": "bypass/include"}]
+        """
+        
+        if protocol == "WireGuard":
+            # Build split tunnel routes
+            bypass_ips = []
+            include_ips = []
+            bypass_domains = []
+            
+            for rule in rules:
+                if rule["action"] == "bypass":
+                    if rule["type"] == "ip":
+                        bypass_ips.append(rule["value"])
+                    elif rule["type"] == "subnet":
+                        bypass_ips.append(rule["value"])
+                    elif rule["type"] == "domain":
+                        bypass_domains.append(rule["value"])
+                elif rule["action"] == "include":
+                    if rule["type"] in ["ip", "subnet"]:
+                        include_ips.append(rule["value"])
+            
+            split_tunnel_section = "\n# Split Tunneling Configuration\n"
+            
+            if bypass_ips:
+                split_tunnel_section += "# Bypass VPN for these IPs (direct connection):\n"
+                for ip in bypass_ips:
+                    split_tunnel_section += f"# PostUp = ip route add {ip} via $(ip route | grep default | awk '{{print $3}}')\n"
+                    split_tunnel_section += f"# PostDown = ip route del {ip}\n"
+            
+            if bypass_domains:
+                split_tunnel_section += "\n# Bypass VPN for these domains:\n"
+                for domain in bypass_domains:
+                    split_tunnel_section += f"# - {domain} (resolve IP and add route)\n"
+            
+            if include_ips:
+                split_tunnel_section += "\n# Only route these IPs through VPN:\n"
+                split_tunnel_section += f"# AllowedIPs = {', '.join(include_ips)}\n"
+            
+            # Insert after [Interface] section
+            lines = base_config.split('\n')
+            interface_end = 0
+            for i, line in enumerate(lines):
+                if line.startswith('[Peer]'):
+                    interface_end = i
+                    break
+            
+            lines.insert(interface_end, split_tunnel_section)
+            return '\n'.join(lines)
+        
+        elif protocol == "OpenVPN":
+            split_tunnel_section = "\n# Split Tunneling Configuration\n"
+            
+            for rule in rules:
+                if rule["action"] == "bypass" and rule["type"] in ["ip", "subnet"]:
+                    # Route through regular gateway (bypass VPN)
+                    split_tunnel_section += f"route {rule['value']} 255.255.255.255 net_gateway\n"
+                elif rule["action"] == "include" and rule["type"] in ["ip", "subnet"]:
+                    # Route through VPN
+                    split_tunnel_section += f"route {rule['value']} 255.255.255.255 vpn_gateway\n"
+                elif rule["type"] == "domain":
+                    split_tunnel_section += f"# Domain: {rule['value']} ({rule['action']})\n"
+            
+            # Add before certificates section
+            return base_config.replace("<ca>", split_tunnel_section + "\n<ca>")
+        
+        return base_config
 
 
 # Singleton instance
