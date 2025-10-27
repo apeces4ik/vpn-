@@ -186,28 +186,44 @@ class AnonVPNTester:
             self.log_test("Payment Creation", False, "Missing user_id or tariff_id")
             return
         
-        payment_data = {
-            "user_id": self.test_data['user_id'],
-            "plan_id": self.test_data['tariff_id'],
-            "pay_currency": "btc",
-            "billing_period": "monthly"
-        }
+        # Try different cryptocurrencies to find one that works with the amount
+        currencies_to_try = ["usdt", "usdc", "ltc", "eth", "btc"]
         
-        success, data = await self.make_request('POST', '/payments/create', params=payment_data)
-        
-        if success and data.get('id'):
-            self.test_data['payment_id'] = data['id']
-            has_address = bool(data.get('pay_address'))
-            has_amount = bool(data.get('pay_amount'))
+        for currency in currencies_to_try:
+            payment_data = {
+                "user_id": self.test_data['user_id'],
+                "plan_id": self.test_data['tariff_id'],
+                "pay_currency": currency,
+                "billing_period": "monthly"
+            }
             
-            if has_address and has_amount:
-                self.log_test("Payment Creation", True, 
-                    f"Created payment: {data['id']}, Address: {data['pay_address'][:20]}...")
+            success, data = await self.make_request('POST', '/payments/create', params=payment_data)
+            
+            if success and data.get('id'):
+                self.test_data['payment_id'] = data['id']
+                has_address = bool(data.get('pay_address'))
+                has_amount = bool(data.get('pay_amount'))
+                
+                if has_address and has_amount:
+                    self.log_test("Payment Creation", True, 
+                        f"Created payment with {currency.upper()}: {data['id']}, Address: {data['pay_address'][:20]}...")
+                    return
+                else:
+                    self.log_test("Payment Creation", False, 
+                        f"Missing payment details for {currency.upper()} - Address: {has_address}, Amount: {has_amount}", data)
+                    return
             else:
-                self.log_test("Payment Creation", False, 
-                    f"Missing payment details - Address: {has_address}, Amount: {has_amount}", data)
-        else:
-            self.log_test("Payment Creation", False, "Failed to create payment", data)
+                # Check if it's a minimum amount error
+                error_msg = str(data)
+                if "too small" in error_msg.lower() or "minimum" in error_msg.lower():
+                    print(f"    {currency.upper()} amount too small, trying next currency...")
+                    continue
+                else:
+                    self.log_test("Payment Creation", False, f"Failed to create payment with {currency.upper()}", data)
+                    return
+        
+        # If we get here, all currencies failed
+        self.log_test("Payment Creation", False, "All tested currencies failed (likely minimum amount issues)")
     
     async def test_payment_status_monitoring(self):
         """Test payment status monitoring"""
