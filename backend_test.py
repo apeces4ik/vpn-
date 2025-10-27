@@ -1656,9 +1656,14 @@ class AnonVPNTester:
         rate_limit_failures = 0
         
         for i in range(5):  # Make 5 quick requests
-            success, data = await self.make_request('POST', '/partner/users',
-                json={"email": f"rate-test-{i}@test.com", "plan_id": plan_id, "plan_duration_days": 30},
-                headers=partner_headers)
+            rate_test_data = {
+                "api_key": api_key,
+                "secret_key": secret_key,
+                "email": f"rate-test-{i}@test.com",
+                "plan_id": plan_id,
+                "plan_duration_days": 30
+            }
+            success, data = await self.make_request('POST', '/partner/users', params=rate_test_data)
             
             if not success and ("rate" in str(data).lower() or "limit" in str(data).lower()):
                 rate_limit_failures += 1
