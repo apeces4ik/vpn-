@@ -419,14 +419,14 @@ async def init_servers():
         return {"message": "Servers already initialized"}
     
     default_servers = [
-        # North America (15 servers)
-        VPNServer(hostname="us-ny-01.anonvpn.io", location="New York", country_code="US", ipv4_address="192.0.2.1"),
+        # North America (15 servers) - Some with Tor support
+        VPNServer(hostname="us-ny-01.anonvpn.io", location="New York", country_code="US", ipv4_address="192.0.2.1", supports_tor=True, tor_socks_port=9050, obfs4_port=9001),
         VPNServer(hostname="us-ny-02.anonvpn.io", location="New York", country_code="US", ipv4_address="192.0.2.2"),
-        VPNServer(hostname="us-la-01.anonvpn.io", location="Los Angeles", country_code="US", ipv4_address="192.0.2.3"),
+        VPNServer(hostname="us-la-01.anonvpn.io", location="Los Angeles", country_code="US", ipv4_address="192.0.2.3", supports_tor=True, tor_socks_port=9050, obfs4_port=9001),
         VPNServer(hostname="us-la-02.anonvpn.io", location="Los Angeles", country_code="US", ipv4_address="192.0.2.4"),
         VPNServer(hostname="us-chi-01.anonvpn.io", location="Chicago", country_code="US", ipv4_address="192.0.2.5"),
         VPNServer(hostname="us-mia-01.anonvpn.io", location="Miami", country_code="US", ipv4_address="192.0.2.6"),
-        VPNServer(hostname="us-sea-01.anonvpn.io", location="Seattle", country_code="US", ipv4_address="192.0.2.7"),
+        VPNServer(hostname="us-sea-01.anonvpn.io", location="Seattle", country_code="US", ipv4_address="192.0.2.7", supports_tor=True, tor_socks_port=9050, obfs4_port=9001),
         VPNServer(hostname="ca-tor-01.anonvpn.io", location="Toronto", country_code="CA", ipv4_address="192.0.2.8"),
         VPNServer(hostname="ca-van-01.anonvpn.io", location="Vancouver", country_code="CA", ipv4_address="192.0.2.9"),
         VPNServer(hostname="us-atl-01.anonvpn.io", location="Atlanta", country_code="US", ipv4_address="192.0.2.10"),
@@ -436,18 +436,18 @@ async def init_servers():
         VPNServer(hostname="ca-mon-01.anonvpn.io", location="Montreal", country_code="CA", ipv4_address="192.0.2.14"),
         VPNServer(hostname="mx-mex-01.anonvpn.io", location="Mexico City", country_code="MX", ipv4_address="192.0.2.15"),
         
-        # Europe (20 servers)
+        # Europe (20 servers) - Enhanced privacy servers with Tor
         VPNServer(hostname="uk-lon-01.anonvpn.io", location="London", country_code="GB", ipv4_address="192.0.2.16"),
         VPNServer(hostname="uk-lon-02.anonvpn.io", location="London", country_code="GB", ipv4_address="192.0.2.17"),
-        VPNServer(hostname="de-fra-01.anonvpn.io", location="Frankfurt", country_code="DE", ipv4_address="192.0.2.18"),
+        VPNServer(hostname="de-fra-01.anonvpn.io", location="Frankfurt", country_code="DE", ipv4_address="192.0.2.18", supports_tor=True, tor_socks_port=9050, obfs4_port=9001),
         VPNServer(hostname="de-fra-02.anonvpn.io", location="Frankfurt", country_code="DE", ipv4_address="192.0.2.19"),
         VPNServer(hostname="de-ber-01.anonvpn.io", location="Berlin", country_code="DE", ipv4_address="192.0.2.20"),
-        VPNServer(hostname="nl-ams-01.anonvpn.io", location="Amsterdam", country_code="NL", ipv4_address="192.0.2.21"),
+        VPNServer(hostname="nl-ams-01.anonvpn.io", location="Amsterdam", country_code="NL", ipv4_address="192.0.2.21", supports_tor=True, tor_socks_port=9050, obfs4_port=9001),
         VPNServer(hostname="nl-ams-02.anonvpn.io", location="Amsterdam", country_code="NL", ipv4_address="192.0.2.22"),
         VPNServer(hostname="fr-par-01.anonvpn.io", location="Paris", country_code="FR", ipv4_address="192.0.2.23"),
         VPNServer(hostname="fr-par-02.anonvpn.io", location="Paris", country_code="FR", ipv4_address="192.0.2.24"),
-        VPNServer(hostname="se-sto-01.anonvpn.io", location="Stockholm", country_code="SE", ipv4_address="192.0.2.25"),
-        VPNServer(hostname="ch-zur-01.anonvpn.io", location="Zurich", country_code="CH", ipv4_address="192.0.2.26"),
+        VPNServer(hostname="se-sto-01.anonvpn.io", location="Stockholm", country_code="SE", ipv4_address="192.0.2.25", supports_tor=True, tor_socks_port=9050, obfs4_port=9001),
+        VPNServer(hostname="ch-zur-01.anonvpn.io", location="Zurich", country_code="CH", ipv4_address="192.0.2.26", supports_tor=True, tor_socks_port=9050, obfs4_port=9001),
         VPNServer(hostname="es-mad-01.anonvpn.io", location="Madrid", country_code="ES", ipv4_address="192.0.2.27"),
         VPNServer(hostname="it-mil-01.anonvpn.io", location="Milan", country_code="IT", ipv4_address="192.0.2.28"),
         VPNServer(hostname="pl-war-01.anonvpn.io", location="Warsaw", country_code="PL", ipv4_address="192.0.2.29"),
@@ -458,10 +458,10 @@ async def init_servers():
         VPNServer(hostname="at-vie-01.anonvpn.io", location="Vienna", country_code="AT", ipv4_address="192.0.2.34"),
         VPNServer(hostname="cz-pra-01.anonvpn.io", location="Prague", country_code="CZ", ipv4_address="192.0.2.35"),
         
-        # Asia (10 servers)
-        VPNServer(hostname="sg-sin-01.anonvpn.io", location="Singapore", country_code="SG", ipv4_address="192.0.2.36"),
+        # Asia (10 servers) - Select servers with Tor
+        VPNServer(hostname="sg-sin-01.anonvpn.io", location="Singapore", country_code="SG", ipv4_address="192.0.2.36", supports_tor=True, tor_socks_port=9050, obfs4_port=9001),
         VPNServer(hostname="sg-sin-02.anonvpn.io", location="Singapore", country_code="SG", ipv4_address="192.0.2.37"),
-        VPNServer(hostname="jp-tok-01.anonvpn.io", location="Tokyo", country_code="JP", ipv4_address="192.0.2.38"),
+        VPNServer(hostname="jp-tok-01.anonvpn.io", location="Tokyo", country_code="JP", ipv4_address="192.0.2.38", supports_tor=True, tor_socks_port=9050, obfs4_port=9001),
         VPNServer(hostname="jp-tok-02.anonvpn.io", location="Tokyo", country_code="JP", ipv4_address="192.0.2.39"),
         VPNServer(hostname="hk-hkg-01.anonvpn.io", location="Hong Kong", country_code="HK", ipv4_address="192.0.2.40"),
         VPNServer(hostname="kr-seo-01.anonvpn.io", location="Seoul", country_code="KR", ipv4_address="192.0.2.41"),
@@ -487,12 +487,22 @@ async def init_servers():
         VPNServer(hostname="au-mel-01.anonvpn.io", location="Melbourne", country_code="AU", ipv4_address="192.0.2.55"),
     ]
     
+    tor_count = sum(1 for s in default_servers if s.supports_tor)
+    
     for server in default_servers:
         doc = server.model_dump()
         doc['created_at'] = doc['created_at'].isoformat()
         await db.vpn_servers.insert_one(doc)
     
-    return {"message": f"Initialized {len(default_servers)} VPN servers"}
+    return {
+        "message": f"Initialized {len(default_servers)} VPN servers",
+        "tor_enabled_servers": tor_count,
+        "features": {
+            "double_vpn": len(default_servers),
+            "obfuscation": len(default_servers),
+            "tor_over_vpn": tor_count
+        }
+    }
 
 @api_router.get("/servers/locations")
 async def get_locations():
