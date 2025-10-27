@@ -456,7 +456,7 @@ agent_communication:
       - Test VPN config generation for all protocols
       - Verify database operations (users, tariffs, servers initialization)
       
-      Backend URL: https://privacyfirst.preview.emergentagent.com/api
+      Backend URL: https://cryptovpn-3.preview.emergentagent.com/api
       NOWPayments: Production mode with real API key
       Database: MongoDB local (anonvpn_enterprise)
       
