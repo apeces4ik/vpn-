@@ -1051,11 +1051,11 @@ backend:
 
   - task: "Security Monitoring & Team Dashboard"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -1067,6 +1067,34 @@ backend:
           - Event severity levels: info, warning, critical
           - Tracks: member additions, connections, suspicious activity
           - Dashboard shows: active members, connections, data usage, security alerts
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ SECURITY MONITORING & TEAM DASHBOARD WORKING
+          
+          Comprehensive Testing Results:
+          
+          1. ✅ Security Events (GET /api/organizations/{org_id}/security/events):
+             - Successfully retrieves security events with proper structure
+             - Events include: id, organization_id, user_id, event_type, severity, description
+             - Automatic event logging for member additions working
+             - Event example: member_added with severity 'info' properly logged
+             - Returns events array with total count
+          
+          2. ✅ Team Dashboard (GET /api/organizations/{org_id}/dashboard):
+             - Successfully returns dashboard with stats section
+             - Shows active_members count (3 members detected)
+             - Includes active_connections and total_data_usage metrics
+             - Dashboard updates reflect real-time organization changes
+             - Minor: Some dashboard sections (security_summary, recent_events) need refinement
+          
+          3. ✅ Security Event Structure:
+             - Proper event_type classification (member_added, etc.)
+             - Severity levels working (info, warning, critical)
+             - Timestamps and metadata tracking functional
+             - Organization-specific event filtering working
+          
+          Security monitoring and dashboard core functionality working for corporate oversight.
 
   - task: "Partner API with Authentication"
     implemented: true
