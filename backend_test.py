@@ -1379,7 +1379,7 @@ class AnonVPNTester:
             "role": "member"
         }
         
-        success, data = await self.make_request('POST', f'/organizations/{org_id}/members', json=member_data)
+        success, data = await self.make_request('POST', f'/organizations/{org_id}/members', params=member_data)
         
         if success and data.get('id'):
             member_id = data['id']
