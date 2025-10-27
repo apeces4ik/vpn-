@@ -498,41 +498,62 @@ async def create_payment(
     price = tariff['price_monthly'] if billing_period == "monthly" else tariff['price_annual']
     
     # Apply crypto discount
-    price = price * (1 - tariff.get('crypto_discount', 0))
+    discount = tariff.get('crypto_discount', 0)
+    final_price = price * (1 - discount)
+    
+    # Validate minimum payment amount (NOWPayments requirement)
+    MIN_PAYMENT_USD = 10.0
+    if final_price < MIN_PAYMENT_USD:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Payment amount ${final_price:.2f} is below minimum ${MIN_PAYMENT_USD}. Please choose annual billing or a higher tier plan."
+        )
     
     # Create payment record
     payment = Payment(
         user_id=user_id,
         plan_id=plan_id,
-        amount=price,
+        amount=final_price,
         currency="USD",
         pay_currency=pay_currency
     )
     
     # Create payment via NOWPayments
     ipn_callback_url = f"{settings.backend_url}/api/payments/webhook"
-    payment_data = await nowpayments_client.create_payment(
-        price_amount=price,
-        price_currency="usd",
-        pay_currency=pay_currency,
-        order_id=payment.id,
-        order_description=f"{tariff['name']} Plan - {billing_period}",
-        ipn_callback_url=ipn_callback_url
-    )
     
-    # Update payment with provider data
-    payment.payment_id = payment_data.get('payment_id')
-    payment.pay_address = payment_data.get('pay_address')
-    payment.pay_amount = payment_data.get('pay_amount')
-    payment.status = "waiting"
+    try:
+        payment_data = await nowpayments_client.create_payment(
+            price_amount=final_price,
+            price_currency="usd",
+            pay_currency=pay_currency,
+            order_id=payment.id,
+            order_description=f"{tariff['name']} Plan - {billing_period}",
+            ipn_callback_url=ipn_callback_url
+        )
+        
+        # Update payment with provider data
+        payment.payment_id = payment_data.get('payment_id')
+        payment.pay_address = payment_data.get('pay_address')
+        payment.pay_amount = payment_data.get('pay_amount')
+        payment.status = "waiting"
+        
+        # Save to database
+        doc = payment.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        doc['updated_at'] = doc['updated_at'].isoformat()
+        await db.payments.insert_one(doc)
+        
+        return payment
     
-    # Save to database
-    doc = payment.model_dump()
-    doc['created_at'] = doc['created_at'].isoformat()
-    doc['updated_at'] = doc['updated_at'].isoformat()
-    await db.payments.insert_one(doc)
-    
-    return payment
+    except HTTPException as e:
+        # Re-raise HTTP exceptions from NOWPayments client
+        raise e
+    except Exception as e:
+        logger.error(f"Unexpected error creating payment: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create payment. Please try a different cryptocurrency or contact support."
+        )
 
 @api_router.get("/payments/{payment_id}", response_model=Payment)
 async def get_payment(payment_id: str):
