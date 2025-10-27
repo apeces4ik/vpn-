@@ -376,7 +376,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, transparent 100%);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%);
   opacity: 0;
   transition: opacity 0.4s ease;
 }
@@ -387,36 +387,37 @@
 
 .server-card:hover {
   border-color: rgba(16, 185, 129, 0.5);
-  transform: translateY(-6px) scale(1.02);
-  box-shadow: 0 20px 50px rgba(16, 185, 129, 0.15);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 60px rgba(16, 185, 129, 0.2), 0 0 40px rgba(16, 185, 129, 0.1);
 }
 
 .server-card.selected {
   border: 2px solid var(--primary);
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, transparent 100%);
-  transform: scale(1.02);
-  box-shadow: 0 8px 30px rgba(16, 185, 129, 0.25);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
+  transform: scale(1.03);
+  box-shadow: 0 8px 40px rgba(16, 185, 129, 0.3);
 }
 
 .server-card.selected::after {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: 16px;
-  padding: 2px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  animation: borderGlow 2s ease-in-out infinite;
+  inset: -2px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  z-index: -1;
+  opacity: 0.5;
+  filter: blur(15px);
+  animation: selectedGlow 2s ease-in-out infinite;
 }
 
-@keyframes borderGlow {
+@keyframes selectedGlow {
   0%, 100% {
-    opacity: 0.5;
+    opacity: 0.3;
+    filter: blur(15px);
   }
   50% {
-    opacity: 1;
+    opacity: 0.6;
+    filter: blur(20px);
   }
 }
 
