@@ -95,6 +95,7 @@ class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     anonymous_id: str = Field(default_factory=lambda: secrets.token_hex(32))
     email: Optional[EmailStr] = None
+    wallet_address: Optional[str] = None  # Ethereum wallet address for crypto auth
     current_plan_id: Optional[str] = None
     plan_expires_at: Optional[datetime] = None
     total_data_used: int = 0
