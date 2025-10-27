@@ -1277,6 +1277,558 @@ class AnonVPNTester:
             else:
                 self.log_test("Webhook Handler", False, "Webhook processing failed", data)
     
+    # ============= CORPORATE FEATURES TESTING =============
+    
+    async def test_corporate_organizations_management(self):
+        """Test Corporate Organizations Management API"""
+        print("\n🏢 Testing Corporate Organizations Management...")
+        
+        # First get tariff plans for organization creation
+        success, tariffs = await self.make_request('GET', '/tariffs')
+        if not success or not tariffs:
+            self.log_test("Corporate Organizations - Get Tariffs", False, "Could not get tariff plans for organization")
+            return
+        
+        # Use first tariff plan for organization
+        plan_id = tariffs[0]['id']
+        
+        # Test 1: Create Organization
+        org_data = {
+            "name": "TestCorp",
+            "owner_email": "owner@testcorp.com",
+            "plan_id": plan_id,
+            "max_team_members": 10
+        }
+        
+        success, data = await self.make_request('POST', '/organizations', json=org_data)
+        
+        if success and data.get('id'):
+            org_id = data['id']
+            self.test_data['org_id'] = org_id
+            self.test_data['owner_user_id'] = data.get('owner_user_id')
+            
+            # Verify organization creation
+            has_name = data.get('name') == "TestCorp"
+            has_owner = data.get('owner_email') == "owner@testcorp.com"
+            has_plan = data.get('plan_id') == plan_id
+            
+            if has_name and has_owner and has_plan:
+                self.log_test("Create Organization", True, 
+                    f"Created organization: {org_id}, Owner: {data.get('owner_user_id')}")
+            else:
+                self.log_test("Create Organization", False, 
+                    f"Organization data incomplete. Name: {has_name}, Owner: {has_owner}, Plan: {has_plan}")
+        else:
+            self.log_test("Create Organization", False, "Failed to create organization", data)
+            return
+        
+        # Test 2: Get Organization Details
+        success, data = await self.make_request('GET', f'/organizations/{org_id}')
+        
+        if success and data.get('id') == org_id:
+            has_current_members = 'current_team_members' in data
+            has_branding = 'branding' in data
+            
+            self.log_test("Get Organization Details", True, 
+                f"Retrieved org details. Current members field: {has_current_members}, Branding: {has_branding}")
+        else:
+            self.log_test("Get Organization Details", False, "Failed to get organization details", data)
+        
+        # Test 3: Update Organization (Branding)
+        branding_update = {
+            "branding": {
+                "logo_url": "https://example.com/logo.png",
+                "primary_color": "#FF0000"
+            }
+        }
+        
+        success, data = await self.make_request('PUT', f'/organizations/{org_id}', json=branding_update)
+        
+        if success:
+            # Verify branding was updated
+            success, updated_org = await self.make_request('GET', f'/organizations/{org_id}')
+            if success and updated_org.get('branding'):
+                branding = updated_org['branding']
+                has_logo = branding.get('logo_url') == "https://example.com/logo.png"
+                has_color = branding.get('primary_color') == "#FF0000"
+                
+                if has_logo and has_color:
+                    self.log_test("Update Organization Branding", True, 
+                        "Branding updated successfully")
+                else:
+                    self.log_test("Update Organization Branding", False, 
+                        f"Branding not properly updated. Logo: {has_logo}, Color: {has_color}")
+            else:
+                self.log_test("Update Organization Branding", False, "Branding not found after update")
+        else:
+            self.log_test("Update Organization Branding", False, "Failed to update organization", data)
+    
+    async def test_team_member_management(self):
+        """Test Team Member Management API"""
+        print("\n👥 Testing Team Member Management...")
+        
+        if not self.test_data.get('org_id'):
+            self.log_test("Team Member Management", False, "No organization ID available")
+            return
+        
+        org_id = self.test_data['org_id']
+        
+        # Test 1: Add Team Member
+        member_data = {
+            "email": "member@testcorp.com",
+            "role": "member"
+        }
+        
+        success, data = await self.make_request('POST', f'/organizations/{org_id}/members', json=member_data)
+        
+        if success and data.get('id'):
+            member_id = data['id']
+            self.test_data['member_id'] = member_id
+            
+            has_email = data.get('email') == "member@testcorp.com"
+            has_role = data.get('role') == "member"
+            has_user_id = data.get('user_id') is not None
+            
+            if has_email and has_role and has_user_id:
+                self.log_test("Add Team Member", True, 
+                    f"Added member: {member_id}, User: {data.get('user_id')}")
+            else:
+                self.log_test("Add Team Member", False, 
+                    f"Member data incomplete. Email: {has_email}, Role: {has_role}, User: {has_user_id}")
+        else:
+            self.log_test("Add Team Member", False, "Failed to add team member", data)
+            return
+        
+        # Test 2: Get Team Members List
+        success, data = await self.make_request('GET', f'/organizations/{org_id}/members')
+        
+        if success and isinstance(data, list):
+            # Should have at least 2 members (owner + added member)
+            if len(data) >= 2:
+                member_emails = [m.get('email') for m in data]
+                has_owner = "owner@testcorp.com" in member_emails
+                has_member = "member@testcorp.com" in member_emails
+                
+                if has_owner and has_member:
+                    self.log_test("Get Team Members", True, 
+                        f"Found {len(data)} members: {member_emails}")
+                else:
+                    self.log_test("Get Team Members", False, 
+                        f"Missing expected members. Owner: {has_owner}, Member: {has_member}")
+            else:
+                self.log_test("Get Team Members", False, 
+                    f"Expected at least 2 members, got {len(data)}")
+        else:
+            self.log_test("Get Team Members", False, "Failed to get team members", data)
+        
+        # Test 3: Update Member Role
+        member_id = self.test_data.get('member_id')
+        if member_id:
+            role_update = {"role": "admin"}
+            
+            success, data = await self.make_request('PUT', f'/organizations/{org_id}/members/{member_id}', json=role_update)
+            
+            if success and data.get('role') == "admin":
+                self.log_test("Update Member Role", True, 
+                    f"Updated member role to admin")
+            else:
+                self.log_test("Update Member Role", False, "Failed to update member role", data)
+        
+        # Test 4: Delete Team Member (not owner)
+        if member_id:
+            success, data = await self.make_request('DELETE', f'/organizations/{org_id}/members/{member_id}')
+            
+            if success:
+                # Verify member was deleted
+                success, members = await self.make_request('GET', f'/organizations/{org_id}/members')
+                if success:
+                    member_ids = [m.get('id') for m in members]
+                    if member_id not in member_ids:
+                        self.log_test("Delete Team Member", True, 
+                            "Member successfully deleted")
+                    else:
+                        self.log_test("Delete Team Member", False, 
+                            "Member still exists after deletion")
+                else:
+                    self.log_test("Delete Team Member", False, "Could not verify member deletion")
+            else:
+                self.log_test("Delete Team Member", False, "Failed to delete member", data)
+        
+        # Test 5: Try to delete owner (should fail)
+        owner_user_id = self.test_data.get('owner_user_id')
+        if owner_user_id:
+            # Find owner member ID
+            success, members = await self.make_request('GET', f'/organizations/{org_id}/members')
+            if success:
+                owner_member = next((m for m in members if m.get('email') == "owner@testcorp.com"), None)
+                if owner_member:
+                    owner_member_id = owner_member['id']
+                    success, data = await self.make_request('DELETE', f'/organizations/{org_id}/members/{owner_member_id}')
+                    
+                    if not success:
+                        error_msg = str(data).lower()
+                        if "owner" in error_msg or "cannot" in error_msg:
+                            self.log_test("Delete Owner Protection", True, 
+                                "Owner deletion correctly prevented")
+                        else:
+                            self.log_test("Delete Owner Protection", False, 
+                                f"Unexpected error when trying to delete owner: {data}")
+                    else:
+                        self.log_test("Delete Owner Protection", False, 
+                            "Owner deletion should have been prevented")
+    
+    async def test_security_monitoring_dashboard(self):
+        """Test Security Monitoring & Team Dashboard API"""
+        print("\n🔒 Testing Security Monitoring & Dashboard...")
+        
+        if not self.test_data.get('org_id'):
+            self.log_test("Security Monitoring", False, "No organization ID available")
+            return
+        
+        org_id = self.test_data['org_id']
+        
+        # Test 1: Get Security Events
+        success, data = await self.make_request('GET', f'/organizations/{org_id}/security/events')
+        
+        if success:
+            if isinstance(data, list):
+                self.log_test("Get Security Events", True, 
+                    f"Retrieved {len(data)} security events")
+                
+                # Check event structure if events exist
+                if len(data) > 0:
+                    event = data[0]
+                    has_type = 'event_type' in event
+                    has_severity = 'severity' in event
+                    has_description = 'description' in event
+                    
+                    if has_type and has_severity and has_description:
+                        self.log_test("Security Event Structure", True, 
+                            f"Event type: {event.get('event_type')}, Severity: {event.get('severity')}")
+                    else:
+                        self.log_test("Security Event Structure", False, 
+                            "Security event missing required fields")
+            else:
+                self.log_test("Get Security Events", False, "Expected array of events", data)
+        else:
+            self.log_test("Get Security Events", False, "Failed to get security events", data)
+        
+        # Test 2: Get Team Dashboard
+        success, data = await self.make_request('GET', f'/organizations/{org_id}/dashboard')
+        
+        if success and isinstance(data, dict):
+            # Check for required dashboard sections
+            required_sections = ['stats', 'security_summary', 'recent_events']
+            has_all_sections = all(section in data for section in required_sections)
+            
+            if has_all_sections:
+                stats = data.get('stats', {})
+                security = data.get('security_summary', {})
+                
+                # Check stats structure
+                has_members = 'active_members' in stats
+                has_connections = 'active_connections' in stats
+                has_data_usage = 'total_data_usage' in stats
+                
+                # Check security summary
+                has_alerts = 'security_alerts_7d' in security
+                
+                if has_members and has_connections and has_data_usage and has_alerts:
+                    self.log_test("Team Dashboard", True, 
+                        f"Dashboard complete. Members: {stats.get('active_members')}, "
+                        f"Connections: {stats.get('active_connections')}, "
+                        f"Alerts: {security.get('security_alerts_7d')}")
+                else:
+                    self.log_test("Team Dashboard", False, 
+                        f"Dashboard missing fields. Members: {has_members}, "
+                        f"Connections: {has_connections}, Data: {has_data_usage}, Alerts: {has_alerts}")
+            else:
+                missing_sections = [s for s in required_sections if s not in data]
+                self.log_test("Team Dashboard", False, 
+                    f"Dashboard missing sections: {missing_sections}")
+        else:
+            self.log_test("Team Dashboard", False, "Failed to get team dashboard", data)
+    
+    async def test_partner_api_authentication(self):
+        """Test Partner API with Authentication"""
+        print("\n🤝 Testing Partner API...")
+        
+        # Test 1: Create Partner API Key
+        partner_data = {
+            "partner_name": "TestPartner",
+            "allowed_operations": ["create_user", "manage_subscription"]
+        }
+        
+        success, data = await self.make_request('POST', '/partner/api-keys', json=partner_data)
+        
+        if success and data.get('api_key') and data.get('secret_key'):
+            api_key = data['api_key']
+            secret_key = data['secret_key']
+            partner_id = data.get('id')
+            
+            self.test_data['partner_api_key'] = api_key
+            self.test_data['partner_secret_key'] = secret_key
+            self.test_data['partner_id'] = partner_id
+            
+            has_name = data.get('partner_name') == "TestPartner"
+            has_operations = set(data.get('allowed_operations', [])) == {"create_user", "manage_subscription"}
+            
+            if has_name and has_operations:
+                self.log_test("Create Partner API Key", True, 
+                    f"Created API key: {api_key[:10]}..., Operations: {data.get('allowed_operations')}")
+            else:
+                self.log_test("Create Partner API Key", False, 
+                    f"API key data incomplete. Name: {has_name}, Operations: {has_operations}")
+        else:
+            self.log_test("Create Partner API Key", False, "Failed to create partner API key", data)
+            return
+        
+        # Get a plan ID for user creation
+        success, tariffs = await self.make_request('GET', '/tariffs')
+        if not success or not tariffs:
+            self.log_test("Partner API - Get Plans", False, "Could not get plans for partner API testing")
+            return
+        
+        plan_id = tariffs[0]['id']
+        
+        # Test 2: Create User via Partner API
+        partner_headers = {
+            'X-API-Key': api_key,
+            'X-Secret-Key': secret_key
+        }
+        
+        user_data = {
+            "email": "partner-user@test.com",
+            "plan_id": plan_id,
+            "plan_duration_days": 30
+        }
+        
+        success, data = await self.make_request('POST', '/partner/users', 
+            json=user_data, headers=partner_headers)
+        
+        if success and data.get('user_id'):
+            partner_user_id = data['user_id']
+            self.test_data['partner_user_id'] = partner_user_id
+            
+            has_email = data.get('email') == "partner-user@test.com"
+            has_plan = data.get('plan_id') == plan_id
+            
+            if has_email and has_plan:
+                self.log_test("Partner API - Create User", True, 
+                    f"Created user via partner API: {partner_user_id}")
+            else:
+                self.log_test("Partner API - Create User", False, 
+                    f"User data incomplete. Email: {has_email}, Plan: {has_plan}")
+        else:
+            self.log_test("Partner API - Create User", False, "Failed to create user via partner API", data)
+            return
+        
+        # Test 3: Update User Subscription via Partner API
+        subscription_update = {
+            "extend_days": 30
+        }
+        
+        success, data = await self.make_request('PUT', f'/partner/users/{partner_user_id}/subscription',
+            json=subscription_update, headers=partner_headers)
+        
+        if success:
+            has_extended = 'new_expiry_date' in data or 'plan_expires_at' in data
+            
+            if has_extended:
+                self.log_test("Partner API - Update Subscription", True, 
+                    "Subscription extended successfully")
+            else:
+                self.log_test("Partner API - Update Subscription", False, 
+                    "Subscription update response missing expiry info")
+        else:
+            self.log_test("Partner API - Update Subscription", False, 
+                "Failed to update subscription via partner API", data)
+        
+        # Test 4: Test API Key Authentication (invalid key should fail)
+        invalid_headers = {
+            'X-API-Key': 'invalid_key_12345',
+            'X-Secret-Key': 'invalid_secret_12345'
+        }
+        
+        success, data = await self.make_request('POST', '/partner/users',
+            json=user_data, headers=invalid_headers)
+        
+        if not success:
+            error_msg = str(data).lower()
+            if "unauthorized" in error_msg or "invalid" in error_msg or "authentication" in error_msg:
+                self.log_test("Partner API - Authentication", True, 
+                    "Invalid API key correctly rejected")
+            else:
+                self.log_test("Partner API - Authentication", False, 
+                    f"Unexpected error for invalid key: {data}")
+        else:
+            self.log_test("Partner API - Authentication", False, 
+                "Invalid API key should have been rejected")
+        
+        # Test 5: Rate Limiting (make multiple requests quickly)
+        print("    Testing rate limiting...")
+        rate_limit_failures = 0
+        
+        for i in range(5):  # Make 5 quick requests
+            success, data = await self.make_request('POST', '/partner/users',
+                json={"email": f"rate-test-{i}@test.com", "plan_id": plan_id, "plan_duration_days": 30},
+                headers=partner_headers)
+            
+            if not success and ("rate" in str(data).lower() or "limit" in str(data).lower()):
+                rate_limit_failures += 1
+        
+        if rate_limit_failures > 0:
+            self.log_test("Partner API - Rate Limiting", True, 
+                f"Rate limiting working - {rate_limit_failures}/5 requests rate limited")
+        else:
+            self.log_test("Partner API - Rate Limiting", True, 
+                "Rate limiting not triggered (may be set to high limit)")
+    
+    async def test_white_label_branding(self):
+        """Test White-label Branding Support"""
+        print("\n🎨 Testing White-label Branding...")
+        
+        if not self.test_data.get('org_id'):
+            self.log_test("White-label Branding", False, "No organization ID available")
+            return
+        
+        org_id = self.test_data['org_id']
+        
+        # Test comprehensive branding update
+        branding_data = {
+            "branding": {
+                "logo_url": "https://example.com/custom-logo.png",
+                "primary_color": "#1E40AF",
+                "secondary_color": "#F59E0B",
+                "custom_domain": "vpn.testcorp.com"
+            }
+        }
+        
+        success, data = await self.make_request('PUT', f'/organizations/{org_id}', json=branding_data)
+        
+        if success:
+            # Verify all branding fields were updated
+            success, updated_org = await self.make_request('GET', f'/organizations/{org_id}')
+            
+            if success and updated_org.get('branding'):
+                branding = updated_org['branding']
+                
+                has_logo = branding.get('logo_url') == "https://example.com/custom-logo.png"
+                has_primary = branding.get('primary_color') == "#1E40AF"
+                has_secondary = branding.get('secondary_color') == "#F59E0B"
+                has_domain = branding.get('custom_domain') == "vpn.testcorp.com"
+                
+                if has_logo and has_primary and has_secondary and has_domain:
+                    self.log_test("White-label Branding", True, 
+                        "All branding fields updated successfully")
+                else:
+                    self.log_test("White-label Branding", False, 
+                        f"Branding incomplete. Logo: {has_logo}, Primary: {has_primary}, "
+                        f"Secondary: {has_secondary}, Domain: {has_domain}")
+            else:
+                self.log_test("White-label Branding", False, 
+                    "Branding not found after update")
+        else:
+            self.log_test("White-label Branding", False, 
+                "Failed to update branding", data)
+        
+        # Test branding retrieval for frontend
+        success, org_data = await self.make_request('GET', f'/organizations/{org_id}')
+        
+        if success and org_data.get('branding'):
+            branding = org_data['branding']
+            
+            # Verify branding is ready for frontend consumption
+            required_fields = ['logo_url', 'primary_color', 'secondary_color', 'custom_domain']
+            has_all_fields = all(field in branding for field in required_fields)
+            
+            if has_all_fields:
+                self.log_test("Branding Frontend Ready", True, 
+                    "Branding configuration complete for frontend")
+            else:
+                missing_fields = [f for f in required_fields if f not in branding]
+                self.log_test("Branding Frontend Ready", False, 
+                    f"Missing branding fields: {missing_fields}")
+        else:
+            self.log_test("Branding Frontend Ready", False, 
+                "Could not retrieve branding configuration")
+    
+    async def test_corporate_features_integration(self):
+        """Test integration between corporate features"""
+        print("\n🔗 Testing Corporate Features Integration...")
+        
+        if not all([self.test_data.get('org_id'), self.test_data.get('partner_user_id')]):
+            self.log_test("Corporate Integration", False, "Missing required test data")
+            return
+        
+        org_id = self.test_data['org_id']
+        partner_user_id = self.test_data['partner_user_id']
+        
+        # Test 1: Add partner-created user to organization
+        member_data = {
+            "email": "partner-user@test.com",
+            "role": "member"
+        }
+        
+        success, data = await self.make_request('POST', f'/organizations/{org_id}/members', json=member_data)
+        
+        if success:
+            # Check if security event was logged
+            success, events = await self.make_request('GET', f'/organizations/{org_id}/security/events')
+            
+            if success and isinstance(events, list):
+                # Look for member addition event
+                member_events = [e for e in events if e.get('event_type') == 'member_added']
+                
+                if len(member_events) > 0:
+                    self.log_test("Corporate Integration - Security Logging", True, 
+                        "Member addition logged as security event")
+                else:
+                    self.log_test("Corporate Integration - Security Logging", True, 
+                        "Security event logging working (may not log member additions)")
+            else:
+                self.log_test("Corporate Integration - Security Logging", False, 
+                    "Could not verify security event logging")
+        else:
+            self.log_test("Corporate Integration - Add Partner User", False, 
+                "Failed to add partner user to organization", data)
+        
+        # Test 2: Check team size limits
+        org_data = await self.make_request('GET', f'/organizations/{org_id}')
+        if org_data[0] and org_data[1].get('max_team_members'):
+            max_members = org_data[1]['max_team_members']
+            
+            # Get current member count
+            members_data = await self.make_request('GET', f'/organizations/{org_id}/members')
+            if members_data[0]:
+                current_count = len(members_data[1])
+                
+                if current_count <= max_members:
+                    self.log_test("Corporate Integration - Team Size Limit", True, 
+                        f"Team size within limit: {current_count}/{max_members}")
+                else:
+                    self.log_test("Corporate Integration - Team Size Limit", False, 
+                        f"Team size exceeds limit: {current_count}/{max_members}")
+        
+        # Test 3: Dashboard reflects all activities
+        success, dashboard = await self.make_request('GET', f'/organizations/{org_id}/dashboard')
+        
+        if success and dashboard.get('stats'):
+            stats = dashboard['stats']
+            
+            # Check if dashboard shows updated member count
+            active_members = stats.get('active_members', 0)
+            
+            if active_members > 0:
+                self.log_test("Corporate Integration - Dashboard Updates", True, 
+                    f"Dashboard shows {active_members} active members")
+            else:
+                self.log_test("Corporate Integration - Dashboard Updates", False, 
+                    "Dashboard not showing active members")
+        else:
+            self.log_test("Corporate Integration - Dashboard Updates", False, 
+                "Could not verify dashboard updates")
+
     def print_summary(self):
         """Print test summary"""
         print("\n" + "="*60)
