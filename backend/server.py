@@ -412,11 +412,15 @@ async def get_servers(
     return servers
 
 @api_router.post("/servers/init")
-async def init_servers():
+async def init_servers(force: bool = False):
     # Check if servers already exist
     existing = await db.vpn_servers.count_documents({})
-    if existing > 0:
+    if existing > 0 and not force:
         return {"message": "Servers already initialized"}
+    
+    # Clear existing servers if force=True
+    if force:
+        await db.vpn_servers.delete_many({})
     
     default_servers = [
         # North America (15 servers) - Some with Tor support
