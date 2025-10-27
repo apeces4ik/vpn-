@@ -1426,7 +1426,7 @@ class AnonVPNTester:
         if member_id:
             role_update = {"role": "admin"}
             
-            success, data = await self.make_request('PUT', f'/organizations/{org_id}/members/{member_id}', json=role_update)
+            success, data = await self.make_request('PUT', f'/organizations/{org_id}/members/{member_id}', params=role_update)
             
             if success and data.get('role') == "admin":
                 self.log_test("Update Member Role", True, 
