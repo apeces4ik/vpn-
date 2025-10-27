@@ -1059,12 +1059,17 @@ metadata:
   production_ready: false
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Corporate Organizations Management"
+    - "Team Member Management"
+    - "Security Monitoring & Team Dashboard"
+    - "Partner API with Authentication"
+    - "White-label Branding Support"
   stuck_tasks: []
-  test_all: true
-  test_priority: "completed"
-  advanced_features_complete: true
-  comprehensive_testing_done: true
+  test_all: false
+  test_priority: "high_first"
+  corporate_features_testing: true
+  comprehensive_testing_done: false
 
 agent_communication:
   - agent: "main"
