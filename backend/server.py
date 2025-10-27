@@ -647,6 +647,145 @@ async def get_overview_stats():
         "total_payments": total_payments
     }
 
+# Admin Analytics Routes
+@api_router.get("/admin/analytics/dashboard")
+async def get_admin_dashboard():
+    # User statistics
+    total_users = await db.users.count_documents({})
+    users_with_plans = await db.users.count_documents({"current_plan_id": {"$ne": None}})
+    
+    # Server statistics
+    servers = await db.vpn_servers.find({}, {"_id": 0}).to_list(1000)
+    total_capacity = sum(s.get('max_capacity', 0) for s in servers)
+    total_connections = sum(s.get('current_connections', 0) for s in servers)
+    
+    # Payment statistics
+    payments = await db.payments.find({"status": "finished"}, {"_id": 0}).to_list(1000)
+    total_revenue = sum(p.get('amount', 0) for p in payments)
+    
+    # Tariff popularity
+    tariff_counts = {}
+    users_list = await db.users.find({"current_plan_id": {"$ne": None}}, {"_id": 0}).to_list(1000)
+    for user in users_list:
+        plan_id = user.get('current_plan_id')
+        if plan_id:
+            tariff_counts[plan_id] = tariff_counts.get(plan_id, 0) + 1
+    
+    return {
+        "users": {
+            "total": total_users,
+            "with_plans": users_with_plans,
+            "free_trial": total_users - users_with_plans
+        },
+        "servers": {
+            "total": len(servers),
+            "total_capacity": total_capacity,
+            "total_connections": total_connections,
+            "utilization": (total_connections / total_capacity * 100) if total_capacity > 0 else 0
+        },
+        "revenue": {
+            "total": total_revenue,
+            "total_payments": len(payments),
+            "average_per_payment": total_revenue / len(payments) if payments else 0
+        },
+        "tariff_popularity": tariff_counts
+    }
+
+@api_router.get("/admin/analytics/geography")
+async def get_geography_analytics():
+    # Server distribution by region
+    servers = await db.vpn_servers.find({}, {"_id": 0}).to_list(1000)
+    
+    regions = {
+        "North America": 0,
+        "Europe": 0,
+        "Asia": 0,
+        "South America": 0,
+        "Africa": 0,
+        "Oceania": 0
+    }
+    
+    region_mapping = {
+        "US": "North America", "CA": "North America", "MX": "North America",
+        "GB": "Europe", "DE": "Europe", "NL": "Europe", "FR": "Europe", "SE": "Europe",
+        "CH": "Europe", "ES": "Europe", "IT": "Europe", "PL": "Europe", "NO": "Europe",
+        "DK": "Europe", "IE": "Europe", "BE": "Europe", "AT": "Europe", "CZ": "Europe",
+        "SG": "Asia", "JP": "Asia", "HK": "Asia", "KR": "Asia", "IN": "Asia",
+        "TW": "Asia", "TH": "Asia",
+        "BR": "South America", "AR": "South America", "CL": "South America", "CO": "South America",
+        "ZA": "Africa", "EG": "Africa",
+        "AU": "Oceania"
+    }
+    
+    for server in servers:
+        country = server.get('country_code', '')
+        region = region_mapping.get(country, "Other")
+        if region in regions:
+            regions[region] += 1
+    
+    return {"regions": regions}
+
+@api_router.get("/admin/analytics/connections-history")
+async def get_connections_history(days: int = 7):
+    # Get connection history for last N days
+    from datetime import datetime, timedelta, timezone
+    
+    start_date = datetime.now(timezone.utc) - timedelta(days=days)
+    
+    connections = await db.connections.find({
+        "connected_at": {"$gte": start_date.isoformat()}
+    }, {"_id": 0}).to_list(10000)
+    
+    # Group by date
+    daily_counts = {}
+    for conn in connections:
+        conn_date = conn.get('connected_at', '')[:10]  # Get YYYY-MM-DD
+        daily_counts[conn_date] = daily_counts.get(conn_date, 0) + 1
+    
+    return {"daily_connections": daily_counts}
+
+@api_router.get("/admin/users")
+async def get_all_users(skip: int = 0, limit: int = 100):
+    users = await db.users.find({}, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
+    total = await db.users.count_documents({})
+    
+    for user in users:
+        if isinstance(user.get('created_at'), str):
+            user['created_at'] = datetime.fromisoformat(user['created_at'])
+        if user.get('last_seen') and isinstance(user.get('last_seen'), str):
+            user['last_seen'] = datetime.fromisoformat(user['last_seen'])
+        if user.get('plan_expires_at') and isinstance(user.get('plan_expires_at'), str):
+            user['plan_expires_at'] = datetime.fromisoformat(user['plan_expires_at'])
+    
+    return {
+        "users": users,
+        "total": total,
+        "page": skip // limit + 1,
+        "pages": (total + limit - 1) // limit
+    }
+
+@api_router.get("/admin/server-metrics/{server_id}")
+async def get_server_metrics(server_id: str):
+    server = await db.vpn_servers.find_one({"id": server_id}, {"_id": 0})
+    if not server:
+        raise HTTPException(status_code=404, detail="Server not found")
+    
+    # Get recent connections for this server
+    connections = await db.connections.find({
+        "server_id": server_id,
+        "is_active": True
+    }, {"_id": 0}).to_list(1000)
+    
+    return {
+        "server": server,
+        "metrics": {
+            "active_connections": len(connections),
+            "capacity_used_percent": (len(connections) / server.get('max_capacity', 1)) * 100,
+            "uptime": "99.95%",  # Mock data
+            "latency_ms": 25  # Mock data
+        }
+    }
+
 # Include router
 app.include_router(api_router)
 
