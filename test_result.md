@@ -668,17 +668,26 @@ backend:
 
 metadata:
   created_by: "main_agent"
-  version: "1.0"
-  test_sequence: 2
+  version: "2.0"
+  test_sequence: 3
   run_ui: false
-  backend_testing_completed: true
-  all_backend_tests_passed: true
+  backend_testing_completed: false
+  all_backend_tests_passed: false
+  phase: "Advanced VPN Features"
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Double VPN Feature"
+    - "Obfuscation (obfs4) Feature"
+    - "Tor-over-VPN Integration"
+    - "Split Tunneling Feature"
+    - "Advanced Connection API Endpoint"
+    - "Advanced Config Download Endpoint"
+    - "Advanced Features Info Endpoint"
+    - "Server Filtering Endpoints"
   stuck_tasks: []
   test_all: false
-  test_priority: "completed"
+  test_priority: "high_first"
 
 agent_communication:
   - agent: "main"
