@@ -166,6 +166,14 @@ const Dashboard = ({ user }) => {
             <span className="logo-text">AnonVPN</span>
           </div>
           <div className="nav-actions">
+            {user.wallet_address && (
+              <div className="wallet-badge" title={user.wallet_address}>
+                <div className="wallet-icon">🔐</div>
+                <span className="wallet-address">
+                  {user.wallet_address.slice(0, 6)}...{user.wallet_address.slice(-4)}
+                </span>
+              </div>
+            )}
             {!userPlan && (
               <button 
                 className="btn btn-primary"
