@@ -383,7 +383,7 @@ const PaymentPage = ({ user, setUser }) => {
             )}
             
             <div className="crypto-grid">
-              {['btc', 'eth', 'ltc', 'xmr', 'usdt', 'usdc'].map((crypto) => (
+              {['btc', 'eth', 'ltc', 'xmr', 'sol', 'usdc'].map((crypto) => (
                 <button
                   key={crypto}
                   className={`crypto-option ${selectedCrypto === crypto ? 'selected' : ''}`}
