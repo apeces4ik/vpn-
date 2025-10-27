@@ -992,7 +992,7 @@ class AnonVPNTester:
             "user_id": self.test_data['user_id'],
             "server_id": self.test_data['server_id'],
             "device_name": "Test Device",
-            "enable_double_vpn": True
+            "enable_double_vpn": "true"
             # Missing exit_server_id
         }
         
