@@ -159,7 +159,7 @@ const PaymentPage = ({ user, setUser }) => {
             </div>
 
             <div className="payment-qr" data-testid="payment-qr">
-              <QRCode 
+              <QRCodeSVG 
                 value={payment.pay_address || ''} 
                 size={200}
                 level="H"
