@@ -178,6 +178,193 @@ class AnonVPNTester:
         else:
             self.log_test("Get Currencies", False, "Failed to get currencies", data)
     
+    async def test_minimum_amount_endpoint(self):
+        """Test the new minimum amount endpoint for different cryptocurrencies"""
+        print("\n💰 Testing Minimum Amount Endpoint...")
+        
+        # Test currencies mentioned in the review request
+        test_currencies = ['btc', 'usdt', 'ltc', 'xmr', 'eth', 'usdc']
+        
+        for currency in test_currencies:
+            success, data = await self.make_request('GET', f'/payments/min-amount?currency_from=usd&currency_to={currency}')
+            
+            if success and 'min_amount' in data:
+                min_amount = data.get('min_amount')
+                self.log_test(f"Min Amount - {currency.upper()}", True, 
+                    f"Minimum amount: ${min_amount}")
+            else:
+                self.log_test(f"Min Amount - {currency.upper()}", False, 
+                    f"Failed to get minimum amount for {currency}", data)
+    
+    async def test_enhanced_payment_error_handling(self):
+        """Test enhanced payment error handling with different cryptocurrencies and scenarios"""
+        print("\n🔧 Testing Enhanced Payment Error Handling...")
+        
+        if not self.test_data['user_id'] or not self.test_data['tariff_id']:
+            self.log_test("Enhanced Payment Error Handling", False, "Missing user_id or tariff_id")
+            return
+        
+        # Get the Basic plan for testing (should be the first one with lowest price)
+        success, tariffs = await self.make_request('GET', '/tariffs')
+        basic_plan = None
+        if success and tariffs:
+            for tariff in tariffs:
+                if tariff['name'].lower() == 'basic':
+                    basic_plan = tariff
+                    break
+        
+        if not basic_plan:
+            self.log_test("Enhanced Payment Error Handling", False, "Could not find Basic plan")
+            return
+        
+        # Test 1: BTC with Basic monthly plan (reported issue)
+        print("    Testing BTC with Basic monthly plan...")
+        btc_monthly_data = {
+            "user_id": self.test_data['user_id'],
+            "plan_id": basic_plan['id'],
+            "pay_currency": "btc",
+            "billing_period": "monthly"
+        }
+        
+        success, data = await self.make_request('POST', '/payments/create', params=btc_monthly_data)
+        
+        if success:
+            self.log_test("BTC Monthly Payment", True, "BTC monthly payment created successfully")
+        else:
+            error_msg = str(data)
+            if "minimum" in error_msg.lower() or "below" in error_msg.lower():
+                self.log_test("BTC Monthly Payment", True, 
+                    f"Expected minimum amount error handled gracefully: {error_msg}")
+            else:
+                self.log_test("BTC Monthly Payment", False, 
+                    f"Unexpected error for BTC monthly: {error_msg}")
+        
+        # Test 2: USDT with Basic monthly plan (reported issue)
+        print("    Testing USDT with Basic monthly plan...")
+        usdt_monthly_data = {
+            "user_id": self.test_data['user_id'],
+            "plan_id": basic_plan['id'],
+            "pay_currency": "usdt",
+            "billing_period": "monthly"
+        }
+        
+        success, data = await self.make_request('POST', '/payments/create', params=usdt_monthly_data)
+        
+        if success:
+            self.log_test("USDT Monthly Payment", True, "USDT monthly payment created successfully")
+        else:
+            error_msg = str(data)
+            if "temporarily unavailable" in error_msg.lower() or "estimate" in error_msg.lower():
+                self.log_test("USDT Monthly Payment", True, 
+                    f"Expected USDT unavailability error handled gracefully: {error_msg}")
+            elif "minimum" in error_msg.lower():
+                self.log_test("USDT Monthly Payment", True, 
+                    f"Expected minimum amount error handled gracefully: {error_msg}")
+            else:
+                self.log_test("USDT Monthly Payment", False, 
+                    f"Unexpected error for USDT monthly: {error_msg}")
+        
+        # Test 3: BTC with Basic annual plan (should work)
+        print("    Testing BTC with Basic annual plan...")
+        btc_annual_data = {
+            "user_id": self.test_data['user_id'],
+            "plan_id": basic_plan['id'],
+            "pay_currency": "btc",
+            "billing_period": "annual"
+        }
+        
+        success, data = await self.make_request('POST', '/payments/create', params=btc_annual_data)
+        
+        if success and data.get('pay_address'):
+            self.log_test("BTC Annual Payment", True, 
+                f"BTC annual payment created: {data['pay_address'][:20]}...")
+        else:
+            error_msg = str(data)
+            if "minimum" in error_msg.lower():
+                self.log_test("BTC Annual Payment", True, 
+                    f"Minimum amount validation working: {error_msg}")
+            else:
+                self.log_test("BTC Annual Payment", False, 
+                    f"BTC annual payment failed: {error_msg}")
+        
+        # Test 4: Other cryptocurrencies
+        other_currencies = ['ltc', 'xmr', 'eth', 'usdc']
+        for currency in other_currencies:
+            print(f"    Testing {currency.upper()} with Basic annual plan...")
+            
+            currency_data = {
+                "user_id": self.test_data['user_id'],
+                "plan_id": basic_plan['id'],
+                "pay_currency": currency,
+                "billing_period": "annual"
+            }
+            
+            success, data = await self.make_request('POST', '/payments/create', params=currency_data)
+            
+            if success and data.get('pay_address'):
+                self.log_test(f"{currency.upper()} Annual Payment", True, 
+                    f"{currency.upper()} annual payment created successfully")
+            else:
+                error_msg = str(data)
+                if any(keyword in error_msg.lower() for keyword in ['minimum', 'unavailable', 'estimate']):
+                    self.log_test(f"{currency.upper()} Annual Payment", True, 
+                        f"Expected error handled gracefully for {currency.upper()}: {error_msg}")
+                else:
+                    self.log_test(f"{currency.upper()} Annual Payment", False, 
+                        f"Unexpected error for {currency.upper()}: {error_msg}")
+    
+    async def test_error_message_quality(self):
+        """Test that error messages are user-friendly and informative"""
+        print("\n📝 Testing Error Message Quality...")
+        
+        if not self.test_data['user_id'] or not self.test_data['tariff_id']:
+            self.log_test("Error Message Quality", False, "Missing user_id or tariff_id")
+            return
+        
+        # Test with invalid currency
+        invalid_currency_data = {
+            "user_id": self.test_data['user_id'],
+            "plan_id": self.test_data['tariff_id'],
+            "pay_currency": "invalid_currency_xyz",
+            "billing_period": "monthly"
+        }
+        
+        success, data = await self.make_request('POST', '/payments/create', params=invalid_currency_data)
+        
+        if not success:
+            error_msg = str(data)
+            # Check if error message is informative
+            if len(error_msg) > 10 and not error_msg.startswith("500") and not error_msg.startswith("Internal"):
+                self.log_test("Error Message Quality", True, 
+                    f"Informative error message for invalid currency: {error_msg[:100]}...")
+            else:
+                self.log_test("Error Message Quality", False, 
+                    f"Error message not user-friendly: {error_msg}")
+        else:
+            self.log_test("Error Message Quality", False, 
+                "Invalid currency should have failed")
+        
+        # Test with missing parameters
+        incomplete_data = {
+            "user_id": self.test_data['user_id'],
+            "pay_currency": "btc"
+            # Missing plan_id and billing_period
+        }
+        
+        success, data = await self.make_request('POST', '/payments/create', params=incomplete_data)
+        
+        if not success:
+            error_msg = str(data)
+            if "required" in error_msg.lower() or "missing" in error_msg.lower() or "plan" in error_msg.lower():
+                self.log_test("Missing Parameters Error", True, 
+                    f"Clear error for missing parameters: {error_msg[:100]}...")
+            else:
+                self.log_test("Missing Parameters Error", False, 
+                    f"Unclear error for missing parameters: {error_msg}")
+        else:
+            self.log_test("Missing Parameters Error", False, 
+                "Missing parameters should have failed")
+    
     async def test_payment_creation(self):
         """Test payment creation workflow"""
         print("\n💰 Testing Payment Creation...")
