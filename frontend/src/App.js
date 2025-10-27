@@ -79,6 +79,7 @@ function App() {
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/team" element={<TeamDashboard />} />
           <Route path="/monitor" element={<ServerMonitor />} />
+          <Route path="/vpn-providers" element={<VPNProviderManager />} />
         </Routes>
       </BrowserRouter>
     </div>
