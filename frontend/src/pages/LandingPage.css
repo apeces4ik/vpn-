@@ -461,6 +461,18 @@
   font-size: 14px;
   font-weight: 600;
   color: white;
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+  animation: bounce 2s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateX(-50%) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-5px);
+  }
+}
 }
 
 .plan-name {
