@@ -1607,11 +1607,13 @@ class AnonVPNTester:
         
         # Test 3: Update User Subscription via Partner API
         subscription_update = {
+            "api_key": api_key,
+            "secret_key": secret_key,
             "extend_days": 30
         }
         
         success, data = await self.make_request('PUT', f'/partner/users/{partner_user_id}/subscription',
-            json=subscription_update, headers=partner_headers)
+            params=subscription_update)
         
         if success:
             has_extended = 'new_expiry_date' in data or 'plan_expires_at' in data
