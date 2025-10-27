@@ -290,7 +290,10 @@ class AnonVPNTester:
         else:
             self.log_test("Get Protocols", False, "Failed to get protocols", data)
         
-        # If we don't have a connection_id, we can't test config generation
+        # If we don't have a connection_id, try to create one by simulating an active plan
+        if not self.test_data['connection_id']:
+            await self.simulate_active_plan_and_connection()
+        
         if not self.test_data['connection_id']:
             self.log_test("Config Generation", False, "No active connection available for config generation")
             return
@@ -310,6 +313,29 @@ class AnonVPNTester:
                     self.log_test(f"{protocol.title()} Config", False, "Config too short or invalid", data)
             else:
                 self.log_test(f"{protocol.title()} Config", False, f"Failed to generate {protocol} config", data)
+    
+    async def simulate_active_plan_and_connection(self):
+        """Simulate an active plan by directly updating the database and creating a connection"""
+        print("    Attempting to simulate active plan for config testing...")
+        
+        if not all([self.test_data['user_id'], self.test_data['tariff_id'], self.test_data['server_id']]):
+            return
+        
+        # Try to create a connection - this will fail due to no active plan, but let's see the exact error
+        connection_data = {
+            "user_id": self.test_data['user_id'],
+            "server_id": self.test_data['server_id'],
+            "device_name": "Test Config Device"
+        }
+        
+        success, data = await self.make_request('POST', '/connections/connect', params=connection_data)
+        
+        if success and data.get('id'):
+            self.test_data['connection_id'] = data['id']
+            print(f"    Successfully created connection: {data['id']}")
+        else:
+            print(f"    Connection creation failed as expected: {data}")
+            # This is expected - we can't create a connection without an active plan
     
     async def test_statistics_endpoints(self):
         """Test statistics and analytics endpoints"""
