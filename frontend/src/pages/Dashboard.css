@@ -725,3 +725,42 @@
   border-color: rgba(0, 255, 65, 0.3);
 }
 
+/* Wallet Badge */
+.wallet-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(0, 255, 65, 0.1);
+  border: 1px solid rgba(0, 255, 65, 0.3);
+  border-radius: 12px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.wallet-badge:hover {
+  background: rgba(0, 255, 65, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 255, 65, 0.2);
+  transform: translateY(-2px);
+}
+
+.wallet-icon {
+  font-size: 16px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.wallet-address {
+  letter-spacing: 0.5px;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+
