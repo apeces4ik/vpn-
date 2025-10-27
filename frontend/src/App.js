@@ -73,6 +73,7 @@ function App() {
               user ? <PaymentPage user={user} setUser={setUser} /> : <Navigate to="/" replace />
             } 
           />
+          <Route path="/admin" element={<AdminPanel />} />
         </Routes>
       </BrowserRouter>
     </div>
