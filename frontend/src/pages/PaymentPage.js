@@ -104,7 +104,21 @@ const PaymentPage = ({ user, setUser }) => {
       toast.success('Payment created! Please send the exact amount.');
     } catch (error) {
       console.error('Failed to create payment:', error);
-      toast.error('Failed to create payment. Please try again.');
+      
+      // Extract error message from response
+      let errorMessage = 'Failed to create payment. Please try again.';
+      
+      if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (error.response?.status === 400) {
+        errorMessage = 'Payment amount is too small. Please try annual billing or a higher tier plan.';
+      } else if (error.response?.status === 500) {
+        errorMessage = 'Payment service error. Please try a different cryptocurrency.';
+      }
+      
+      toast.error(errorMessage, {
+        duration: 5000
+      });
     } finally {
       setProcessingPayment(false);
     }
