@@ -131,6 +131,20 @@ class NOWPaymentsClient:
             "Content-Type": "application/json"
         }
     
+    async def get_status(self) -> Dict:
+        """Check API status and authentication"""
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                response = await client.get(
+                    f"{self.base_url}/status",
+                    headers=self.headers
+                )
+                response.raise_for_status()
+                return response.json()
+            except Exception as e:
+                logger.error(f"Failed to check status: {str(e)}")
+                return {"message": "error"}
+    
     async def get_available_currencies(self) -> List[str]:
         async with httpx.AsyncClient(timeout=30.0) as client:
             try:
@@ -143,8 +157,8 @@ class NOWPaymentsClient:
                 return data.get('currencies', [])
             except Exception as e:
                 logger.error(f"Failed to fetch currencies: {str(e)}")
-                # Return supported currencies as fallback
-                return ["btc", "eth", "ltc", "xmr", "zec", "dash", "usdt", "usdc", "dai", "xrp", "ada", "sol"]
+                # Return supported privacy and major cryptocurrencies
+                return ["btc", "eth", "ltc", "xmr", "zec", "dash", "usdt", "usdc", "dai", "xrp", "ada", "sol", "bnb", "trx"]
     
     async def get_estimate_price(self, amount: float, currency_from: str, currency_to: str) -> Dict:
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -163,7 +177,7 @@ class NOWPaymentsClient:
                 return response.json()
             except Exception as e:
                 logger.error(f"Failed to get estimate: {str(e)}")
-                return {"estimated_amount": amount * 0.95, "currency_from": currency_from, "currency_to": currency_to}
+                raise HTTPException(status_code=500, detail=f"Failed to get price estimate: {str(e)}")
     
     async def create_payment(self, price_amount: float, price_currency: str, pay_currency: str, 
                            order_id: str, order_description: str, ipn_callback_url: str) -> Dict:
@@ -180,25 +194,52 @@ class NOWPaymentsClient:
                     "is_fee_paid_by_user": True
                 }
                 
+                logger.info(f"Creating payment: {payload}")
+                
                 response = await client.post(
                     f"{self.base_url}/payment",
                     headers=self.headers,
                     json=payload
                 )
                 response.raise_for_status()
+                data = response.json()
+                logger.info(f"Payment created successfully: {data}")
+                return data
+            except httpx.HTTPError as e:
+                logger.error(f"HTTP error creating payment: {str(e)}")
+                if hasattr(e, 'response') and e.response is not None:
+                    logger.error(f"Response content: {e.response.text}")
+                raise HTTPException(status_code=500, detail=f"Failed to create payment: {str(e)}")
+            except Exception as e:
+                logger.error(f"Unexpected error creating payment: {str(e)}")
+                raise HTTPException(status_code=500, detail=f"Failed to create payment: {str(e)}")
+    
+    async def get_payment_status(self, payment_id: int) -> Dict:
+        """Get payment status from NOWPayments"""
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                response = await client.get(
+                    f"{self.base_url}/payment/{payment_id}",
+                    headers=self.headers
+                )
+                response.raise_for_status()
                 return response.json()
             except Exception as e:
-                logger.error(f"Failed to create payment: {str(e)}")
-                # Return mock data for demo
-                return {
-                    "payment_id": 123456,
-                    "pay_address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
-                    "pay_amount": price_amount / 50000,  # Mock BTC price
-                    "pay_currency": pay_currency,
-                    "price_amount": price_amount,
-                    "price_currency": price_currency,
-                    "order_id": order_id
-                }
+                logger.error(f"Failed to get payment status: {str(e)}")
+                return None
+    
+    def verify_ipn_signature(self, request_data: bytes, signature: str) -> bool:
+        """Verify IPN callback signature"""
+        try:
+            calculated_signature = hmac.new(
+                settings.nowpayments_ipn_secret.encode(),
+                request_data,
+                hashlib.sha512
+            ).hexdigest()
+            return hmac.compare_digest(calculated_signature, signature)
+        except Exception as e:
+            logger.error(f"Failed to verify signature: {str(e)}")
+            return False
 
 nowpayments_client = NOWPaymentsClient()
 
