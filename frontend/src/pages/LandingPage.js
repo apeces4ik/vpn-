@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Globe, Lock, Zap, Server, Eye, ChevronRight, Check } from 'lucide-react';
+import { Shield, Globe, Lock, Zap, Server, Eye, ChevronRight, Check, Wallet } from 'lucide-react';
+import { ethers } from 'ethers';
+import TypingEffect from '../components/TypingEffect';
 import './LandingPage.css';
 
 const LandingPage = ({ user, createUser }) => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -14,12 +16,36 @@ const LandingPage = ({ user, createUser }) => {
     }
   }, [user, navigate]);
 
-  const handleGetStarted = async (anonymous = true) => {
+  const connectWallet = async () => {
+    setConnecting(true);
+    setError('');
+
     try {
-      await createUser(anonymous ? null : email);
+      if (!window.ethereum) {
+        setError('Please install MetaMask to continue');
+        setConnecting(false);
+        return;
+      }
+
+      // Request account access
+      const accounts = await window.ethereum.request({
+        method: 'eth_requestAccounts'
+      });
+
+      const walletAddress = accounts[0];
+      
+      // Create user with wallet address
+      await createUser(walletAddress, true); // true indicates wallet login
       navigate('/dashboard');
-    } catch (error) {
-      console.error('Failed to get started:', error);
+    } catch (err) {
+      console.error('Wallet connection error:', err);
+      if (err.code === 4001) {
+        setError('Wallet connection rejected');
+      } else {
+        setError('Failed to connect wallet. Please try again.');
+      }
+    } finally {
+      setConnecting(false);
     }
   };
 
@@ -59,7 +85,7 @@ const LandingPage = ({ user, createUser }) => {
   const plans = [
     {
       name: "Basic",
-      price: "9.99",
+      price: "19.99",
       devices: 3,
       speed: "1 Gbps",
       features: [
@@ -71,7 +97,7 @@ const LandingPage = ({ user, createUser }) => {
     },
     {
       name: "Pro",
-      price: "19.99",
+      price: "39.99",
       devices: 5,
       speed: "10 Gbps",
       popular: true,
@@ -85,7 +111,7 @@ const LandingPage = ({ user, createUser }) => {
     },
     {
       name: "Ultimate",
-      price: "29.99",
+      price: "59.99",
       devices: 10,
       speed: "10 Gbps",
       features: [
@@ -119,9 +145,11 @@ const LandingPage = ({ user, createUser }) => {
           </div>
           
           <h1 className="hero-title" data-testid="hero-title">
-            Your Privacy,
+            <span className="hero-title-line">Your Privacy,</span>
             <br />
-            <span className="gradient-text">Absolutely Anonymous</span>
+            <span className="gradient-text">
+              <TypingEffect text="Absolutely Anonymous" delay={80} />
+            </span>
           </h1>
           
           <p className="hero-description" data-testid="hero-description">
@@ -131,45 +159,32 @@ const LandingPage = ({ user, createUser }) => {
           </p>
 
           <div className="hero-buttons">
-            {!showEmailForm ? (
-              <>
-                <button 
-                  className="btn btn-primary btn-lg"
-                  onClick={() => handleGetStarted(true)}
-                  data-testid="get-started-anonymous-btn"
-                >
-                  Get Started Anonymously
+            <button 
+              className="btn btn-primary btn-lg wallet-connect-btn"
+              onClick={connectWallet}
+              disabled={connecting}
+              data-testid="connect-wallet-btn"
+            >
+              {connecting ? (
+                <>
+                  <div className="spinner-small"></div>
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <Wallet size={20} />
+                  Connect Wallet (MetaMask)
                   <ChevronRight size={20} />
-                </button>
-                <button 
-                  className="btn btn-secondary btn-lg"
-                  onClick={() => setShowEmailForm(true)}
-                  data-testid="get-started-email-btn"
-                >
-                  Sign Up with Email
-                </button>
-              </>
-            ) : (
-              <div className="email-form" data-testid="email-form">
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="email-input"
-                  data-testid="email-input"
-                />
-                <button 
-                  className="btn btn-primary"
-                  onClick={() => handleGetStarted(false)}
-                  disabled={!email}
-                  data-testid="submit-email-btn"
-                >
-                  Continue
-                </button>
-              </div>
-            )}
+                </>
+              )}
+            </button>
           </div>
+
+          {error && (
+            <div className="error-message" data-testid="wallet-error">
+              {error}
+            </div>
+          )}
 
           <div className="hero-stats">
             <div className="stat" data-testid="stat-users">
@@ -247,10 +262,11 @@ const LandingPage = ({ user, createUser }) => {
               </ul>
               <button 
                 className={`btn ${plan.popular ? 'btn-primary' : 'btn-secondary'} btn-block`}
-                onClick={() => handleGetStarted(true)}
+                onClick={connectWallet}
+                disabled={connecting}
                 data-testid={`select-plan-btn-${index}`}
               >
-                Select Plan
+                {connecting ? 'Connecting...' : 'Select Plan'}
               </button>
             </div>
           ))}
@@ -266,11 +282,17 @@ const LandingPage = ({ user, createUser }) => {
           </p>
           <button 
             className="btn btn-primary btn-lg"
-            onClick={() => handleGetStarted(true)}
+            onClick={connectWallet}
+            disabled={connecting}
             data-testid="cta-get-started-btn"
           >
-            Get Started Now
-            <ChevronRight size={20} />
+            {connecting ? 'Connecting...' : (
+              <>
+                <Wallet size={20} />
+                Connect Wallet Now
+                <ChevronRight size={20} />
+              </>
+            )}
           </button>
         </div>
       </section>
