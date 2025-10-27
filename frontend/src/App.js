@@ -8,6 +8,7 @@ import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/Dashboard';
 import PaymentPage from './pages/PaymentPage';
 import AdminPanel from './pages/AdminPanel';
+import TeamDashboard from './pages/TeamDashboard';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -74,6 +75,7 @@ function App() {
             } 
           />
           <Route path="/admin" element={<AdminPanel />} />
+          <Route path="/team" element={<TeamDashboard />} />
         </Routes>
       </BrowserRouter>
     </div>
