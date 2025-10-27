@@ -150,7 +150,7 @@ const LandingPage = ({ user, createUser }) => {
             </span>
             <br />
             <span className="gradient-text-bright">
-              <TypingEffect text="Absolutely Anonymous" delay={100} />
+              <TypingEffect text="Absolutely Anonymous" delay={100} startDelay={1500} />
             </span>
           </h1>
           
