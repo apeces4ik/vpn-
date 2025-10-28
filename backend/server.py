@@ -264,6 +264,203 @@ class DedicatedIP(BaseModel):
     assigned_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     expires_at: Optional[datetime] = None
 
+class OAuth2Provider(BaseModel):
+    """OAuth2 provider configuration for enterprise SSO"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    provider_name: str  # google, microsoft, okta, etc.
+    client_id: str
+    client_secret: str
+    authorization_url: str
+    token_url: str
+    userinfo_url: str
+    scopes: List[str] = ["openid", "profile", "email"]
+    is_active: bool = True
+    organization_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class SAMLProvider(BaseModel):
+    """SAML provider configuration for enterprise SSO"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    provider_name: str
+    organization_id: str
+    idp_entity_id: str
+    sso_url: str
+    x509_cert: str
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ActiveSession(BaseModel):
+    """Active VPN sessions for tracking and management"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    device_id: str
+    device_name: str
+    connection_id: str
+    server_id: str
+    server_location: str
+    protocol: str
+    connected_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    last_activity: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    ip_address: str
+    country: Optional[str] = None
+    city: Optional[str] = None
+    data_sent: int = 0  # bytes
+    data_received: int = 0  # bytes
+    is_active: bool = True
+
+class GDPRRequest(BaseModel):
+    """GDPR compliance data requests"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    request_type: str  # data_export, data_deletion, data_rectification
+    status: str = "pending"  # pending, processing, completed, rejected
+    requested_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    completed_at: Optional[datetime] = None
+    data_url: Optional[str] = None  # For data exports
+    notes: Optional[str] = None
+
+class AuditLog(BaseModel):
+    """No-log policy audit trail (metadata only)"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    action: str  # server_started, policy_verified, config_changed
+    result: str  # success, failed
+    details: str
+    auditor: Optional[str] = None
+
+class SecurityIncident(BaseModel):
+    """Security incident tracking and response"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    description: str
+    severity: str  # low, medium, high, critical
+    status: str = "open"  # open, investigating, resolved, closed
+    affected_systems: List[str] = []
+    actions_taken: List[str] = []
+    detected_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    resolved_at: Optional[datetime] = None
+    assigned_to: Optional[str] = None
+
+class SupportTicket(BaseModel):
+    """Customer support ticket system"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    subject: str
+    description: str
+    priority: str = "normal"  # low, normal, high, urgent
+    status: str = "open"  # open, in_progress, waiting_customer, resolved, closed
+    category: str = "general"  # technical, billing, account, general
+    assigned_to: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    resolved_at: Optional[datetime] = None
+    messages: List[Dict[str, Any]] = []
+
+class SLAMetric(BaseModel):
+    """Service Level Agreement metrics tracking"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    uptime_percentage: float = 99.95
+    avg_response_time: float = 0.0  # milliseconds
+    incident_count: int = 0
+    critical_incident_count: int = 0
+    mttr: Optional[float] = None  # Mean Time To Repair (minutes)
+    meets_sla: bool = True
+
+class DMCANotice(BaseModel):
+    """DMCA takedown notice tracking"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    complainant_name: str
+    complainant_email: str
+    content_description: str
+    alleged_user_id: Optional[str] = None
+    status: str = "received"  # received, investigating, resolved, rejected
+    received_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    resolved_at: Optional[datetime] = None
+    action_taken: Optional[str] = None
+
+class SecurityAudit(BaseModel):
+    """Security audit scheduling and results"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    audit_type: str  # penetration_test, vulnerability_scan, compliance_audit, code_review
+    scheduled_date: datetime
+    completed_date: Optional[datetime] = None
+    status: str = "scheduled"  # scheduled, in_progress, completed, failed
+    auditor: str
+    findings: List[Dict[str, Any]] = []
+    report_url: Optional[str] = None
+    severity_summary: Dict[str, int] = {}
+
+class Alert(BaseModel):
+    """System alerting for monitoring and incidents"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    alert_type: str  # server_down, high_cpu, high_memory, security_breach, payment_failed
+    severity: str  # info, warning, error, critical
+    title: str
+    message: str
+    source: str  # server_id, user_id, system
+    is_active: bool = True
+    acknowledged: bool = False
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    acknowledged_at: Optional[datetime] = None
+    resolved_at: Optional[datetime] = None
+
+class AffiliatePartner(BaseModel):
+    """Affiliate partner tracking for revenue sharing"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    affiliate_code: str = Field(default_factory=lambda: secrets.token_urlsafe(10))
+    commission_rate: float = 0.30  # 30% commission
+    total_earnings: float = 0.0
+    pending_earnings: float = 0.0
+    paid_earnings: float = 0.0
+    clicks: int = 0
+    signups: int = 0
+    conversions: int = 0
+    status: str = "active"  # active, suspended, terminated
+    payment_method: Optional[str] = None
+    payment_details: Optional[Dict[str, Any]] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class AffiliateEarning(BaseModel):
+    """Affiliate earnings tracking"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    affiliate_id: str
+    user_id: str  # Referred user
+    payment_id: str
+    amount: float
+    commission: float
+    status: str = "pending"  # pending, approved, paid
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    paid_at: Optional[datetime] = None
+
+class Device(BaseModel):
+    """User device management"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    device_name: str
+    device_type: str  # desktop, mobile, tablet, router
+    os: str  # windows, macos, linux, ios, android
+    last_connection: Optional[datetime] = None
+    is_active: bool = True
+    max_connections: int = 1
+    active_connections: int = 0
+    added_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 # ============= NOWPAYMENTS CLIENT =============
 
 class NOWPaymentsClient:
