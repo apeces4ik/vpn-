@@ -11,6 +11,17 @@ import AdminPanel from './pages/AdminPanel';
 import TeamDashboard from './pages/TeamDashboard';
 import ServerMonitor from './components/ServerMonitor';
 import VPNProviderManager from './components/VPNProviderManager';
+// New UI Pages
+import DeviceManagement from './pages/DeviceManagement';
+import LoyaltyProgram from './pages/LoyaltyProgram';
+import CustomDNS from './pages/CustomDNS';
+import ConnectionHistory from './pages/ConnectionHistory';
+import ReferralProgram from './pages/ReferralProgram';
+import AffiliateDashboard from './pages/AffiliateDashboard';
+import SupportTickets from './pages/SupportTickets';
+import WhiteLabelBranding from './pages/WhiteLabelBranding';
+import ServerMonitoringDashboard from './pages/ServerMonitoringDashboard';
+import SecurityDashboard from './pages/SecurityDashboard';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
