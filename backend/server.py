@@ -2561,6 +2561,413 @@ async def partner_update_subscription(
     
     return {"message": "Subscription updated successfully"}
 
+# ============= ANALYTICS & MONITORING ENDPOINTS =============
+
+@api_router.get("/analytics/dashboard")
+async def get_analytics_dashboard():
+    """Get comprehensive analytics dashboard data"""
+    try:
+        # Total users
+        total_users = await db.users.count_documents({})
+        
+        # Active subscriptions
+        now = datetime.now(timezone.utc)
+        active_subscriptions = await db.users.count_documents({
+            "plan_expires_at": {"$gte": now.isoformat()}
+        })
+        
+        # Total payments
+        total_payments = await db.payments.count_documents({})
+        successful_payments = await db.payments.count_documents({"status": {"$in": ["confirmed", "finished"]}})
+        
+        # Revenue calculation
+        payments_cursor = db.payments.find({"status": {"$in": ["confirmed", "finished"]}})
+        total_revenue = 0
+        monthly_revenue = 0
+        month_start = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        async for payment in payments_cursor:
+            total_revenue += payment.get('amount', 0)
+            payment_date = payment.get('created_at')
+            if isinstance(payment_date, str):
+                payment_date = datetime.fromisoformat(payment_date.replace('Z', '+00:00'))
+            if payment_date >= month_start:
+                monthly_revenue += payment.get('amount', 0)
+        
+        # Active connections
+        active_connections = await db.connections.count_documents({"is_active": True})
+        
+        # Geography data (top 5 countries)
+        geography_pipeline = [
+            {"$match": {"country": {"$ne": None}}},
+            {"$group": {"_id": "$country", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 5}
+        ]
+        geography_cursor = db.connection_history.aggregate(geography_pipeline)
+        geography = [{"country": doc["_id"], "users": doc["count"]} async for doc in geography_cursor]
+        
+        # Popular plans
+        plan_pipeline = [
+            {"$match": {"current_plan_id": {"$ne": None}}},
+            {"$group": {"_id": "$current_plan_id", "count": {"$sum": 1}}}
+        ]
+        plan_cursor = db.users.aggregate(plan_pipeline)
+        plan_stats = {}
+        async for doc in plan_cursor:
+            plan_doc = await db.tariff_plans.find_one({"id": doc["_id"]})
+            if plan_doc:
+                plan_stats[plan_doc['name']] = doc['count']
+        
+        # Server load
+        server_count = await db.vpn_servers.count_documents({"is_active": True})
+        
+        return {
+            "total_users": total_users,
+            "active_subscriptions": active_subscriptions,
+            "total_revenue": round(total_revenue, 2),
+            "monthly_revenue": round(monthly_revenue, 2),
+            "total_payments": total_payments,
+            "successful_payments": successful_payments,
+            "conversion_rate": round((successful_payments / total_payments * 100) if total_payments > 0 else 0, 2),
+            "active_connections": active_connections,
+            "active_servers": server_count,
+            "geography": geography,
+            "popular_plans": plan_stats,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Analytics error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/analytics/revenue")
+async def get_revenue_analytics(period: str = Query("month", regex="^(day|week|month|year)$")):
+    """Get revenue analytics for specified period"""
+    try:
+        now = datetime.now(timezone.utc)
+        
+        if period == "day":
+            start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif period == "week":
+            start_date = now - timedelta(days=7)
+        elif period == "month":
+            start_date = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        else:  # year
+            start_date = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        pipeline = [
+            {
+                "$match": {
+                    "status": {"$in": ["confirmed", "finished"]},
+                    "created_at": {"$gte": start_date.isoformat()}
+                }
+            },
+            {
+                "$group": {
+                    "_id": {
+                        "$dateToString": {
+                            "format": "%Y-%m-%d",
+                            "date": {"$dateFromString": {"dateString": "$created_at"}}
+                        }
+                    },
+                    "revenue": {"$sum": "$amount"},
+                    "count": {"$sum": 1}
+                }
+            },
+            {"$sort": {"_id": 1}}
+        ]
+        
+        cursor = db.payments.aggregate(pipeline)
+        data = [{"date": doc["_id"], "revenue": round(doc["revenue"], 2), "transactions": doc["count"]} async for doc in cursor]
+        
+        total = sum(item["revenue"] for item in data)
+        
+        return {
+            "period": period,
+            "start_date": start_date.isoformat(),
+            "end_date": now.isoformat(),
+            "total_revenue": round(total, 2),
+            "data": data
+        }
+    except Exception as e:
+        logger.error(f"Revenue analytics error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============= CONNECTION HISTORY ENDPOINTS =============
+
+@api_router.get("/users/{user_id}/connection-history")
+async def get_user_connection_history(
+    user_id: str,
+    limit: int = Query(50, ge=1, le=500)
+):
+    """Get user's connection history (metadata only, no traffic logs)"""
+    try:
+        cursor = db.connection_history.find(
+            {"user_id": user_id}
+        ).sort("connected_at", -1).limit(limit)
+        
+        history = []
+        async for doc in cursor:
+            # Get server location
+            server = await db.vpn_servers.find_one({"id": doc.get("server_id")})
+            doc["server_name"] = server.get("location") if server else "Unknown"
+            history.append(doc)
+        
+        return {
+            "user_id": user_id,
+            "total_sessions": len(history),
+            "history": history
+        }
+    except Exception as e:
+        logger.error(f"Connection history error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/users/{user_id}/active-sessions")
+async def get_user_active_sessions(user_id: str):
+    """Get user's currently active VPN sessions"""
+    try:
+        cursor = db.connections.find({
+            "user_id": user_id,
+            "is_active": True
+        })
+        
+        sessions = []
+        async for doc in cursor:
+            # Get server details
+            server = await db.vpn_servers.find_one({"id": doc.get("server_id")})
+            if server:
+                session = {
+                    "connection_id": doc["id"],
+                    "server_location": server["location"],
+                    "protocol": doc.get("protocol", "WireGuard"),
+                    "device_name": doc.get("device_name", "Unknown"),
+                    "connected_at": doc["connected_at"],
+                    "duration_seconds": int((datetime.now(timezone.utc) - datetime.fromisoformat(doc["connected_at"].replace('Z', '+00:00'))).total_seconds()) if isinstance(doc["connected_at"], str) else 0
+                }
+                sessions.append(session)
+        
+        return {
+            "user_id": user_id,
+            "active_sessions_count": len(sessions),
+            "sessions": sessions
+        }
+    except Exception as e:
+        logger.error(f"Active sessions error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============= REFERRAL PROGRAM ENDPOINTS =============
+
+@api_router.post("/referrals/create")
+async def create_referral_code(user_id: str):
+    """Create a referral code for a user"""
+    try:
+        # Check if user exists
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Check if user already has a referral code
+        existing = await db.referral_programs.find_one({"referrer_id": user_id})
+        if existing:
+            return {
+                "message": "Referral code already exists",
+                "referral_code": existing["referral_code"],
+                "referral_link": f"https://anonvpn.com/signup?ref={existing['referral_code']}"
+            }
+        
+        # Create new referral program
+        referral = ReferralProgram(
+            referrer_id=user_id,
+            expires_at=datetime.now(timezone.utc) + timedelta(days=365)
+        )
+        
+        doc = referral.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        if doc['expires_at']:
+            doc['expires_at'] = doc['expires_at'].isoformat()
+        
+        await db.referral_programs.insert_one(doc)
+        
+        logger.info(f"Created referral code for user: {user_id}")
+        
+        return {
+            "message": "Referral code created successfully",
+            "referral_code": referral.referral_code,
+            "referral_link": f"https://anonvpn.com/signup?ref={referral.referral_code}",
+            "commission_rate": referral.commission_rate * 100,
+            "expires_at": doc['expires_at']
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Create referral error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/referrals/{user_id}/stats")
+async def get_referral_stats(user_id: str):
+    """Get referral statistics for a user"""
+    try:
+        referral = await db.referral_programs.find_one({"referrer_id": user_id})
+        if not referral:
+            raise HTTPException(status_code=404, detail="No referral program found for this user")
+        
+        # Get referred users
+        referred_users = []
+        if referral.get("referred_id"):
+            user_doc = await db.users.find_one({"id": referral["referred_id"]})
+            if user_doc:
+                referred_users.append({
+                    "user_id": user_doc["id"],
+                    "signed_up_at": user_doc.get("created_at"),
+                    "has_subscription": bool(user_doc.get("current_plan_id"))
+                })
+        
+        return {
+            "referral_code": referral["referral_code"],
+            "referral_link": f"https://anonvpn.com/signup?ref={referral['referral_code']}",
+            "clicks": referral.get("clicks", 0),
+            "signups": referral.get("signups", 0),
+            "conversions": referral.get("conversions", 0),
+            "total_earned": round(referral.get("total_earned", 0), 2),
+            "commission_rate": referral.get("commission_rate", 0.2) * 100,
+            "status": referral.get("status", "active"),
+            "referred_users": referred_users
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Referral stats error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/referrals/track-click")
+async def track_referral_click(referral_code: str):
+    """Track a click on a referral link"""
+    try:
+        result = await db.referral_programs.update_one(
+            {"referral_code": referral_code},
+            {"$inc": {"clicks": 1}}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="Invalid referral code")
+        
+        return {"message": "Click tracked successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Track click error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/referrals/track-signup")
+async def track_referral_signup(referral_code: str, new_user_id: str):
+    """Track when a referred user signs up"""
+    try:
+        # Update referral program
+        result = await db.referral_programs.update_one(
+            {"referral_code": referral_code},
+            {
+                "$inc": {"signups": 1},
+                "$set": {"referred_id": new_user_id}
+            }
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="Invalid referral code")
+        
+        return {"message": "Signup tracked successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Track signup error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============= DEDICATED IP ENDPOINTS =============
+
+@api_router.post("/dedicated-ip/assign")
+async def assign_dedicated_ip(user_id: str, server_id: str):
+    """Assign a dedicated IP to a user (Ultimate plan only)"""
+    try:
+        # Check user plan
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        if not user.get("current_plan_id"):
+            raise HTTPException(status_code=403, detail="No active subscription")
+        
+        plan = await db.tariff_plans.find_one({"id": user["current_plan_id"]})
+        if not plan or "dedicated_ip" not in plan.get("special_features", []):
+            raise HTTPException(status_code=403, detail="Dedicated IP not available in your plan")
+        
+        # Check if user already has a dedicated IP
+        existing = await db.dedicated_ips.find_one({"user_id": user_id, "is_active": True})
+        if existing:
+            raise HTTPException(status_code=400, detail="User already has a dedicated IP")
+        
+        # Get server
+        server = await db.vpn_servers.find_one({"id": server_id})
+        if not server:
+            raise HTTPException(status_code=404, detail="Server not found")
+        
+        # Generate a mock dedicated IP (in production, this would be from IP pool)
+        import random
+        ip_address = f"185.{random.randint(1, 254)}.{random.randint(1, 254)}.{random.randint(1, 254)}"
+        
+        # Create dedicated IP
+        dedicated_ip = DedicatedIP(
+            user_id=user_id,
+            ip_address=ip_address,
+            server_id=server_id,
+            location=server["location"],
+            expires_at=user.get("plan_expires_at")
+        )
+        
+        doc = dedicated_ip.model_dump()
+        doc['assigned_at'] = doc['assigned_at'].isoformat()
+        if doc.get('expires_at'):
+            if isinstance(doc['expires_at'], datetime):
+                doc['expires_at'] = doc['expires_at'].isoformat()
+        
+        await db.dedicated_ips.insert_one(doc)
+        
+        logger.info(f"Assigned dedicated IP {ip_address} to user: {user_id}")
+        
+        return {
+            "message": "Dedicated IP assigned successfully",
+            "ip_address": ip_address,
+            "location": server["location"],
+            "expires_at": doc.get('expires_at')
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Assign dedicated IP error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/dedicated-ip/{user_id}")
+async def get_user_dedicated_ip(user_id: str):
+    """Get user's dedicated IP if they have one"""
+    try:
+        dedicated_ip = await db.dedicated_ips.find_one({
+            "user_id": user_id,
+            "is_active": True
+        })
+        
+        if not dedicated_ip:
+            raise HTTPException(status_code=404, detail="No dedicated IP found")
+        
+        return {
+            "ip_address": dedicated_ip["ip_address"],
+            "location": dedicated_ip["location"],
+            "assigned_at": dedicated_ip["assigned_at"],
+            "expires_at": dedicated_ip.get("expires_at")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get dedicated IP error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Include router
 app.include_router(api_router)
 
