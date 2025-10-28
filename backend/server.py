@@ -461,6 +461,82 @@ class Device(BaseModel):
     active_connections: int = 0
     added_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+# ============= REQUEST MODELS FOR API =============
+
+class CreateOAuth2ProviderRequest(BaseModel):
+    """Request model for creating OAuth2 provider"""
+    organization_id: str
+    provider_name: str
+    client_id: str
+    client_secret: str
+    authorization_url: str
+    token_url: str
+    userinfo_url: str
+    scopes: List[str] = ["openid", "profile", "email"]
+
+class CreateSAMLProviderRequest(BaseModel):
+    """Request model for creating SAML provider"""
+    organization_id: str
+    provider_name: str
+    idp_entity_id: str
+    sso_url: str
+    x509_cert: str
+
+class RegisterAffiliateRequest(BaseModel):
+    """Request model for affiliate registration"""
+    user_id: str
+    payment_method: str
+    payment_details: Dict[str, Any]
+
+class CreateSecurityIncidentRequest(BaseModel):
+    """Request model for creating security incident"""
+    title: str
+    description: str
+    severity: str
+    affected_systems: List[str] = []
+    assigned_to: Optional[str] = None
+
+class ResolveSecurityIncidentRequest(BaseModel):
+    """Request model for resolving security incident"""
+    actions_taken: List[str]
+    resolved_by: str
+
+class CreateSupportTicketRequest(BaseModel):
+    """Request model for creating support ticket"""
+    user_id: str
+    subject: str
+    description: str
+    priority: str = "normal"
+    category: str = "general"
+
+class CreateDMCANoticeRequest(BaseModel):
+    """Request model for DMCA notice"""
+    complainant_name: str
+    complainant_email: str
+    content_description: str
+    alleged_user_id: Optional[str] = None
+
+class ScheduleSecurityAuditRequest(BaseModel):
+    """Request model for scheduling security audit"""
+    audit_type: str
+    scheduled_date: str
+    auditor: str
+
+class CreateAlertRequest(BaseModel):
+    """Request model for creating alert"""
+    alert_type: str
+    severity: str
+    title: str
+    message: str
+    source: str
+
+class CreateAuditLogRequest(BaseModel):
+    """Request model for audit log"""
+    action: str
+    result: str
+    details: str
+    auditor: Optional[str] = None
+
 # ============= NOWPAYMENTS CLIENT =============
 
 class NOWPaymentsClient:
