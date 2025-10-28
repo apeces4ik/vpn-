@@ -183,6 +183,17 @@ const Dashboard = ({ user, logout }) => {
                 Upgrade Now
               </button>
             )}
+            <button 
+              className="btn btn-secondary"
+              onClick={() => {
+                logout();
+                navigate('/');
+              }}
+              data-testid="logout-btn"
+              style={{ marginLeft: '10px' }}
+            >
+              Disconnect
+            </button>
           </div>
         </div>
       </nav>
