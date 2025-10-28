@@ -1197,7 +1197,7 @@ async def payment_webhook(request: dict, background_tasks: BackgroundTasks):
 @api_router.post("/connections/connect")
 async def connect_to_server(user_id: str, server_id: str, device_name: str):
     # Check if user has active plan
-    user = await db.users.find_one({"id": user_id})
+    user = await db.users.find_one({"id": request.user_id})
     if not user or not user.get('current_plan_id'):
         raise HTTPException(status_code=403, detail="No active subscription")
     
@@ -3280,7 +3280,7 @@ async def create_referral_code(user_id: str):
     """Create a referral code for a user"""
     try:
         # Check if user exists
-        user = await db.users.find_one({"id": user_id})
+        user = await db.users.find_one({"id": request.user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
@@ -3939,7 +3939,7 @@ async def get_shadowsocks_config(connection_id: str):
 async def get_user_devices(user_id: str):
     """Get all devices registered for a user"""
     try:
-        user = await db.users.find_one({"id": user_id})
+        user = await db.users.find_one({"id": request.user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
@@ -3986,7 +3986,7 @@ async def register_device(
 ):
     """Register a new device for a user"""
     try:
-        user = await db.users.find_one({"id": user_id})
+        user = await db.users.find_one({"id": request.user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
@@ -4043,7 +4043,7 @@ async def register_device(
 async def remove_device(user_id: str, device_id: str):
     """Remove a device from user's account"""
     try:
-        user = await db.users.find_one({"id": user_id})
+        user = await db.users.find_one({"id": request.user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
@@ -4094,7 +4094,7 @@ async def assign_dedicated_ip(user_id: str, server_id: str):
     """Assign a dedicated IP to a user (Ultimate plan only)"""
     try:
         # Check user plan
-        user = await db.users.find_one({"id": user_id})
+        user = await db.users.find_one({"id": request.user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
@@ -4289,7 +4289,7 @@ async def create_referral_code(user_id: str):
     """Create a referral code for a user"""
     try:
         # Check if user exists
-        user = await db.users.find_one({"id": user_id})
+        user = await db.users.find_one({"id": request.user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
@@ -4535,7 +4535,7 @@ async def request_data_export(user_id: str):
     """Request GDPR data export"""
     try:
         # Check if user exists
-        user = await db.users.find_one({"id": user_id})
+        user = await db.users.find_one({"id": request.user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
@@ -4576,7 +4576,7 @@ async def request_data_deletion(user_id: str, confirm: bool = False):
             )
         
         # Check if user exists
-        user = await db.users.find_one({"id": user_id})
+        user = await db.users.find_one({"id": request.user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
@@ -4625,19 +4625,14 @@ async def get_gdpr_requests(user_id: str):
 # ============= NO-LOG AUDIT & SECURITY =============
 
 @api_router.post("/audit/log")
-async def create_audit_log(
-    action: str,
-    result: str,
-    details: str,
-    auditor: Optional[str] = None
-):
+async def create_audit_log(request: CreateAuditLogRequest):
     """Create audit log entry (internal use)"""
     try:
         audit_log = AuditLog(
-            action=action,
-            result=result,
-            details=details,
-            auditor=auditor
+            action=request.action,
+            result=request.result,
+            details=request.details,
+            auditor=request.auditor
         )
         
         doc = audit_log.model_dump()
@@ -4645,7 +4640,7 @@ async def create_audit_log(
         
         await db.audit_logs.insert_one(doc)
         
-        logger.info(f"Audit log created: {action}")
+        logger.info(f"Audit log created: {request.action}")
         
         return {"message": "Audit log created", "log_id": doc["id"]}
     except Exception as e:
@@ -4689,21 +4684,15 @@ async def get_no_log_report(
 # ============= SECURITY INCIDENT RESPONSE =============
 
 @api_router.post("/security/incidents")
-async def create_security_incident(
-    title: str,
-    description: str,
-    severity: str,
-    affected_systems: List[str] = [],
-    assigned_to: Optional[str] = None
-):
+async def create_security_incident(request: CreateSecurityIncidentRequest):
     """Create a security incident"""
     try:
         incident = SecurityIncident(
-            title=title,
-            description=description,
-            severity=severity,
-            affected_systems=affected_systems,
-            assigned_to=assigned_to
+            title=request.title,
+            description=request.description,
+            severity=request.severity,
+            affected_systems=request.affected_systems,
+            assigned_to=request.assigned_to
         )
         
         doc = incident.model_dump()
@@ -4711,7 +4700,7 @@ async def create_security_incident(
         
         await db.security_incidents.insert_one(doc)
         
-        logger.warning(f"Security incident created: {title} (Severity: {severity})")
+        logger.warning(f"Security incident created: {request.title} (Severity: {request.severity})")
         
         return {
             "message": "Security incident created",
@@ -4786,31 +4775,25 @@ async def resolve_security_incident(
 # ============= SLA & SUPPORT SYSTEM =============
 
 @api_router.post("/support/tickets")
-async def create_support_ticket(
-    user_id: str,
-    subject: str,
-    description: str,
-    priority: str = "normal",
-    category: str = "general"
-):
+async def create_support_ticket(request: CreateSupportTicketRequest):
     """Create a support ticket"""
     try:
         # Check user plan for priority support
-        user = await db.users.find_one({"id": user_id})
+        user = await db.users.find_one({"id": request.user_id})
         if user and user.get("current_plan_id"):
             plan = await db.tariff_plans.find_one({"id": user["current_plan_id"]})
             if plan and plan.get("name") == "Ultimate":
-                priority = "high"  # Ultimate plan gets priority support
+                request.priority = "high"  # Ultimate plan gets priority support
         
         ticket = SupportTicket(
-            user_id=user_id,
-            subject=subject,
-            description=description,
-            priority=priority,
-            category=category,
+            user_id=request.user_id,
+            subject=request.subject,
+            description=request.description,
+            priority=request.priority,
+            category=request.category,
             messages=[{
                 "sender": "user",
-                "message": description,
+                "message": request.description,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }]
         )
@@ -4821,7 +4804,7 @@ async def create_support_ticket(
         
         await db.support_tickets.insert_one(doc)
         
-        logger.info(f"Support ticket created: {subject} (Priority: {priority})")
+        logger.info(f"Support ticket created: {request.subject} (Priority: {request.priority})")
         
         return {
             "message": "Support ticket created successfully",
@@ -4887,19 +4870,14 @@ async def get_sla_metrics(days: int = Query(default=30, le=365)):
 # ============= DMCA & LEGAL =============
 
 @api_router.post("/legal/dmca-notice")
-async def submit_dmca_notice(
-    complainant_name: str,
-    complainant_email: str,
-    content_description: str,
-    alleged_user_id: Optional[str] = None
-):
+async def submit_dmca_notice(request: CreateDMCANoticeRequest):
     """Submit a DMCA takedown notice"""
     try:
         notice = DMCANotice(
-            complainant_name=complainant_name,
-            complainant_email=complainant_email,
-            content_description=content_description,
-            alleged_user_id=alleged_user_id
+            complainant_name=request.complainant_name,
+            complainant_email=request.complainant_email,
+            content_description=request.content_description,
+            alleged_user_id=request.alleged_user_id
         )
         
         doc = notice.model_dump()
@@ -4907,7 +4885,7 @@ async def submit_dmca_notice(
         
         await db.dmca_notices.insert_one(doc)
         
-        logger.info(f"DMCA notice received from: {complainant_email}")
+        logger.info(f"DMCA notice received from: {request.complainant_email}")
         
         return {
             "message": "DMCA notice received and will be reviewed within 24-48 hours",
@@ -4942,17 +4920,13 @@ async def get_dmca_notices(
 # ============= SECURITY AUDITS =============
 
 @api_router.post("/security/audits/schedule")
-async def schedule_security_audit(
-    audit_type: str,
-    scheduled_date: str,
-    auditor: str
-):
+async def schedule_security_audit(request: ScheduleSecurityAuditRequest):
     """Schedule a security audit"""
     try:
         audit = SecurityAudit(
-            audit_type=audit_type,
-            scheduled_date=datetime.fromisoformat(scheduled_date.replace('Z', '+00:00')),
-            auditor=auditor
+            audit_type=request.audit_type,
+            scheduled_date=datetime.fromisoformat(request.scheduled_date.replace('Z', '+00:00')),
+            auditor=request.auditor
         )
         
         doc = audit.model_dump()
@@ -4960,7 +4934,7 @@ async def schedule_security_audit(
         
         await db.security_audits.insert_one(doc)
         
-        logger.info(f"Security audit scheduled: {audit_type} on {scheduled_date}")
+        logger.info(f"Security audit scheduled: {request.audit_type} on {request.scheduled_date}")
         
         return {
             "message": "Security audit scheduled successfully",
@@ -4989,21 +4963,15 @@ async def get_security_audits(status: Optional[str] = None):
 # ============= ALERTING SYSTEM =============
 
 @api_router.post("/alerts/create")
-async def create_alert(
-    alert_type: str,
-    severity: str,
-    title: str,
-    message: str,
-    source: str
-):
+async def create_alert(request: CreateAlertRequest):
     """Create a system alert"""
     try:
         alert = Alert(
-            alert_type=alert_type,
-            severity=severity,
-            title=title,
-            message=message,
-            source=source
+            alert_type=request.alert_type,
+            severity=request.severity,
+            title=request.title,
+            message=request.message,
+            source=request.source
         )
         
         doc = alert.model_dump()
@@ -5011,7 +4979,7 @@ async def create_alert(
         
         await db.alerts.insert_one(doc)
         
-        logger.warning(f"Alert created: {title} (Severity: {severity})")
+        logger.warning(f"Alert created: {request.title} (Severity: {request.severity})")
         
         return {
             "message": "Alert created successfully",
