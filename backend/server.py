@@ -4506,21 +4506,15 @@ async def get_oauth_providers(organization_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.post("/auth/saml/configure")
-async def configure_saml_provider(
-    organization_id: str,
-    provider_name: str,
-    idp_entity_id: str,
-    sso_url: str,
-    x509_cert: str
-):
+async def configure_saml_provider(request: CreateSAMLProviderRequest):
     """Configure SAML provider for organization"""
     try:
         provider = SAMLProvider(
-            organization_id=organization_id,
-            provider_name=provider_name,
-            idp_entity_id=idp_entity_id,
-            sso_url=sso_url,
-            x509_cert=x509_cert
+            organization_id=request.organization_id,
+            provider_name=request.provider_name,
+            idp_entity_id=request.idp_entity_id,
+            sso_url=request.sso_url,
+            x509_cert=request.x509_cert
         )
         
         doc = provider.model_dump()
@@ -4528,7 +4522,7 @@ async def configure_saml_provider(
         
         await db.saml_providers.insert_one(doc)
         
-        logger.info(f"Configured SAML provider {provider_name} for org: {organization_id}")
+        logger.info(f"Configured SAML provider {request.provider_name} for org: {request.organization_id}")
         
         return {
             "message": "SAML provider configured successfully",
