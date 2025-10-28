@@ -758,6 +758,114 @@ PersistentKeepalive = 25
         
         return base_config
 
+    def generate_shadowsocks_config(self, server_ip: str, server_location: str, 
+                                    user_id: str) -> str:
+        """
+        Generate Shadowsocks configuration
+        
+        Shadowsocks is a secure socks5 proxy designed to protect your Internet traffic.
+        Ideal for bypassing censorship and GFW (Great Firewall).
+        """
+        
+        # Generate random password
+        password = base64.b64encode(secrets.token_bytes(16)).decode('utf-8')
+        
+        # Server port (typically 8388)
+        server_port = 8388
+        
+        # Encryption method (AES-256-GCM is recommended)
+        method = "aes-256-gcm"
+        
+        # Generate Shadowsocks URI format
+        # ss://base64(method:password)@server:port
+        credentials = f"{method}:{password}"
+        encoded_credentials = base64.b64encode(credentials.encode()).decode('utf-8')
+        ss_uri = f"ss://{encoded_credentials}@{server_ip}:{server_port}#{server_location}"
+        
+        # JSON format config (for ss-local client)
+        json_config = f'''{{
+    "server": "{server_ip}",
+    "server_port": {server_port},
+    "local_address": "127.0.0.1",
+    "local_port": 1080,
+    "password": "{password}",
+    "timeout": 300,
+    "method": "{method}",
+    "fast_open": true,
+    "reuse_port": true,
+    "no_delay": true,
+    "mode": "tcp_and_udp",
+    "plugin": "v2ray-plugin",
+    "plugin_opts": "tls;host={server_ip}"
+}}'''
+        
+        # Full configuration with instructions
+        config = f"""# ========================================
+# Shadowsocks Configuration
+# Location: {server_location}
+# ========================================
+
+# CONNECTION URI (Quick Connect)
+# Use this with Shadowsocks clients (mobile apps, etc.)
+{ss_uri}
+
+# JSON CONFIGURATION (Advanced)
+# Save as shadowsocks.json and use with ss-local
+{json_config}
+
+# ========================================
+# INSTALLATION INSTRUCTIONS
+# ========================================
+
+# Linux/macOS:
+# 1. Install Shadowsocks-libev:
+#    Debian/Ubuntu: sudo apt-get install shadowsocks-libev
+#    macOS: brew install shadowsocks-libev
+#
+# 2. Save the JSON config above as /etc/shadowsocks-libev/config.json
+#
+# 3. Start the client:
+#    ss-local -c /etc/shadowsocks-libev/config.json
+
+# Windows:
+# 1. Download Shadowsocks-Windows from:
+#    https://github.com/shadowsocks/shadowsocks-windows/releases
+#
+# 2. Import the SS URI or configure manually with the details above
+
+# Mobile (iOS/Android):
+# 1. Install Shadowsocks app from App Store/Play Store
+# 2. Scan QR code or import SS URI
+
+# ========================================
+# CONNECTION DETAILS
+# ========================================
+Server: {server_ip}
+Port: {server_port}
+Password: {password}
+Encryption: {method}
+Plugin: v2ray-plugin (optional, for extra obfuscation)
+
+# ========================================
+# FEATURES
+# ========================================
+- Fast and lightweight SOCKS5 proxy
+- Bypasses censorship and GFW
+- Support for TCP and UDP
+- Plugin support for traffic obfuscation
+- Low latency and high throughput
+
+# ========================================
+# USER INFO
+# ========================================
+User ID: {user_id}
+Generated: {secrets.token_hex(8)}
+
+# Note: Keep this configuration private and secure!
+"""
+        
+        return config
+
 
 # Singleton instance
 vpn_config_generator = VPNConfigGenerator()
