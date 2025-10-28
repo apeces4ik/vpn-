@@ -73,13 +73,13 @@ function App() {
           <Route 
             path="/dashboard" 
             element={
-              user ? <Dashboard user={user} /> : <Navigate to="/" replace />
+              user ? <Dashboard user={user} logout={logout} /> : <Navigate to="/" replace />
             } 
           />
           <Route 
             path="/payment" 
             element={
-              user ? <PaymentPage user={user} setUser={setUser} /> : <Navigate to="/" replace />
+              user ? <PaymentPage user={user} setUser={setUser} logout={logout} /> : <Navigate to="/" replace />
             } 
           />
           <Route path="/admin" element={<AdminPanel />} />
