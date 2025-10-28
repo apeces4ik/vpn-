@@ -289,90 +289,59 @@ const Dashboard = ({ user, logout }) => {
 
         {/* Quick Links Menu */}
         <div className="quick-links-section" style={{
-          background: 'rgba(255, 255, 255, 0.03)',
-          borderRadius: '16px',
-          padding: '24px',
+          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
+          borderRadius: '20px',
+          padding: '28px',
           marginBottom: '32px',
-          border: '1px solid rgba(255, 255, 255, 0.1)'
+          border: '1px solid rgba(139, 92, 246, 0.2)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
         }}>
           <h3 style={{
             color: 'white',
-            fontSize: '18px',
-            fontWeight: '600',
-            marginBottom: '16px',
+            fontSize: '20px',
+            fontWeight: '700',
+            marginBottom: '20px',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            gap: '10px'
           }}>
-            <Settings size={20} />
+            <Settings size={24} style={{ color: '#8B5CF6' }} />
             Quick Access
           </h3>
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '12px'
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gap: '16px'
           }}>
             <button
               onClick={() => navigate('/devices')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '10px',
-                padding: '12px 16px',
-                background: 'rgba(59, 130, 246, 0.1)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                borderRadius: '8px',
+                gap: '12px',
+                padding: '16px 20px',
+                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%)',
+                border: '2px solid rgba(59, 130, 246, 0.4)',
+                borderRadius: '12px',
                 color: 'white',
                 cursor: 'pointer',
-                transition: 'all 0.2s'
+                transition: 'all 0.3s',
+                fontSize: '15px',
+                fontWeight: '600'
               }}
-              onMouseOver={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)'}
-              onMouseOut={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'}
-            >
-              <Smartphone size={18} style={{ color: '#60A5FA' }} />
-              <span>Devices</span>
-            </button>
-            
-            <button
-              onClick={() => navigate('/loyalty')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '12px 16px',
-                background: 'rgba(168, 85, 247, 0.1)',
-                border: '1px solid rgba(168, 85, 247, 0.3)',
-                borderRadius: '8px',
-                color: 'white',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(37, 99, 235, 0.2) 100%)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.3)';
               }}
-              onMouseOver={(e) => e.currentTarget.style.background = 'rgba(168, 85, 247, 0.2)'}
-              onMouseOut={(e) => e.currentTarget.style.background = 'rgba(168, 85, 247, 0.1)'}
-            >
-              <Award size={18} style={{ color: '#C084FC' }} />
-              <span>Rewards</span>
-            </button>
-
-            <button
-              onClick={() => navigate('/dns')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '12px 16px',
-                background: 'rgba(34, 197, 94, 0.1)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
-                borderRadius: '8px',
-                color: 'white',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%)';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
               }}
-              onMouseOver={(e) => e.currentTarget.style.background = 'rgba(34, 197, 94, 0.2)'}
-              onMouseOut={(e) => e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)'}
             >
-              <Globe size={18} style={{ color: '#4ADE80' }} />
-              <span>DNS Settings</span>
+              <Smartphone size={20} style={{ color: '#60A5FA' }} />
+              <span>My Devices</span>
             </button>
 
             <button
@@ -380,19 +349,29 @@ const Dashboard = ({ user, logout }) => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '10px',
-                padding: '12px 16px',
-                background: 'rgba(99, 102, 241, 0.1)',
-                border: '1px solid rgba(99, 102, 241, 0.3)',
-                borderRadius: '8px',
+                gap: '12px',
+                padding: '16px 20px',
+                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.1) 100%)',
+                border: '2px solid rgba(99, 102, 241, 0.4)',
+                borderRadius: '12px',
                 color: 'white',
                 cursor: 'pointer',
-                transition: 'all 0.2s'
+                transition: 'all 0.3s',
+                fontSize: '15px',
+                fontWeight: '600'
               }}
-              onMouseOver={(e) => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)'}
-              onMouseOut={(e) => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)'}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(79, 70, 229, 0.2) 100%)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 8px 20px rgba(99, 102, 241, 0.3)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(79, 70, 229, 0.1) 100%)';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
             >
-              <Wifi size={18} style={{ color: '#818CF8' }} />
+              <Wifi size={20} style={{ color: '#818CF8' }} />
               <span>Connection History</span>
             </button>
 
@@ -401,20 +380,30 @@ const Dashboard = ({ user, logout }) => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '10px',
-                padding: '12px 16px',
-                background: 'rgba(236, 72, 153, 0.1)',
-                border: '1px solid rgba(236, 72, 153, 0.3)',
-                borderRadius: '8px',
+                gap: '12px',
+                padding: '16px 20px',
+                background: 'linear-gradient(135deg, rgba(236, 72, 153, 0.2) 0%, rgba(219, 39, 119, 0.1) 100%)',
+                border: '2px solid rgba(236, 72, 153, 0.4)',
+                borderRadius: '12px',
                 color: 'white',
                 cursor: 'pointer',
-                transition: 'all 0.2s'
+                transition: 'all 0.3s',
+                fontSize: '15px',
+                fontWeight: '600'
               }}
-              onMouseOver={(e) => e.currentTarget.style.background = 'rgba(236, 72, 153, 0.2)'}
-              onMouseOut={(e) => e.currentTarget.style.background = 'rgba(236, 72, 153, 0.1)'}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(236, 72, 153, 0.3) 0%, rgba(219, 39, 119, 0.2) 100%)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 8px 20px rgba(236, 72, 153, 0.3)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(236, 72, 153, 0.2) 0%, rgba(219, 39, 119, 0.1) 100%)';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
             >
-              <Users size={18} style={{ color: '#F472B6' }} />
-              <span>Refer Friends</span>
+              <Users size={20} style={{ color: '#F472B6' }} />
+              <span>Refer & Earn</span>
             </button>
 
             <button
@@ -422,41 +411,30 @@ const Dashboard = ({ user, logout }) => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '10px',
-                padding: '12px 16px',
-                background: 'rgba(251, 146, 60, 0.1)',
-                border: '1px solid rgba(251, 146, 60, 0.3)',
-                borderRadius: '8px',
+                gap: '12px',
+                padding: '16px 20px',
+                background: 'linear-gradient(135deg, rgba(251, 146, 60, 0.2) 0%, rgba(249, 115, 22, 0.1) 100%)',
+                border: '2px solid rgba(251, 146, 60, 0.4)',
+                borderRadius: '12px',
                 color: 'white',
                 cursor: 'pointer',
-                transition: 'all 0.2s'
+                transition: 'all 0.3s',
+                fontSize: '15px',
+                fontWeight: '600'
               }}
-              onMouseOver={(e) => e.currentTarget.style.background = 'rgba(251, 146, 60, 0.2)'}
-              onMouseOut={(e) => e.currentTarget.style.background = 'rgba(251, 146, 60, 0.1)'}
-            >
-              <LifeBuoy size={18} style={{ color: '#FB923C' }} />
-              <span>Support</span>
-            </button>
-
-            <button
-              onClick={() => navigate('/monitoring')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '12px 16px',
-                background: 'rgba(6, 182, 212, 0.1)',
-                border: '1px solid rgba(6, 182, 212, 0.3)',
-                borderRadius: '8px',
-                color: 'white',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(251, 146, 60, 0.3) 0%, rgba(249, 115, 22, 0.2) 100%)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 8px 20px rgba(251, 146, 60, 0.3)';
               }}
-              onMouseOver={(e) => e.currentTarget.style.background = 'rgba(6, 182, 212, 0.2)'}
-              onMouseOut={(e) => e.currentTarget.style.background = 'rgba(6, 182, 212, 0.1)'}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(251, 146, 60, 0.2) 0%, rgba(249, 115, 22, 0.1) 100%)';
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
             >
-              <Server size={18} style={{ color: '#22D3EE' }} />
-              <span>Server Status</span>
+              <LifeBuoy size={20} style={{ color: '#FB923C' }} />
+              <span>Get Support</span>
             </button>
           </div>
         </div>
