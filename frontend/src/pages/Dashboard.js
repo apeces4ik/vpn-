@@ -12,7 +12,7 @@ import AdvancedFeaturesModal from '../components/AdvancedFeaturesModal';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const Dashboard = ({ user }) => {
+const Dashboard = ({ user, logout }) => {
   const navigate = useNavigate();
   const [servers, setServers] = useState([]);
   const [locations, setLocations] = useState([]);
