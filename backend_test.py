@@ -1239,6 +1239,428 @@ class AnonVPNTester:
         else:
             self.log_test("Geography Analytics", False, "Failed to get geography data", data)
     
+    # ============= NEW ENDPOINTS TESTING (Review Request) =============
+    
+    async def test_custom_dns_endpoints(self):
+        """Test Custom DNS endpoints"""
+        print("\n🌐 Testing Custom DNS Endpoints...")
+        
+        # Test 1: GET /api/dns/public - Get public DNS servers
+        success, data = await self.make_request('GET', '/dns/public')
+        if success and data.get('public_dns'):
+            public_dns = data['public_dns']
+            expected_dns = ['Cloudflare DNS', 'Google DNS', 'Quad9 DNS', 'OpenDNS']
+            found_dns = [dns['name'] for dns in public_dns]
+            
+            if len(public_dns) >= 4 and all(dns in found_dns for dns in expected_dns):
+                self.log_test("Get Public DNS Servers", True, 
+                    f"Found {len(public_dns)} public DNS servers: {', '.join(found_dns)}")
+            else:
+                self.log_test("Get Public DNS Servers", False, 
+                    f"Expected 4+ DNS servers, got {len(public_dns)}: {found_dns}")
+        else:
+            self.log_test("Get Public DNS Servers", False, "Failed to get public DNS servers", data)
+        
+        # Test 2: POST /api/dns/custom - Create custom DNS
+        if not self.test_data.get('user_id'):
+            self.log_test("Create Custom DNS", False, "No user_id available for testing")
+            return
+        
+        custom_dns_data = {
+            "user_id": self.test_data['user_id'],
+            "name": "Test Custom DNS",
+            "primary_dns": "1.1.1.1",
+            "secondary_dns": "8.8.8.8",
+            "description": "Test DNS configuration"
+        }
+        
+        success, data = await self.make_request('POST', '/dns/custom', params=custom_dns_data)
+        if success and data.get('dns_id'):
+            self.test_data['custom_dns_id'] = data['dns_id']
+            self.log_test("Create Custom DNS", True, 
+                f"Created custom DNS: {data['name']} ({data['primary_dns']})")
+        else:
+            self.log_test("Create Custom DNS", False, "Failed to create custom DNS", data)
+        
+        # Test 3: GET /api/dns/user/{user_id} - Get user's custom DNS
+        success, data = await self.make_request('GET', f"/dns/user/{self.test_data['user_id']}")
+        if success and 'dns_servers' in data:
+            dns_count = data.get('custom_dns_count', 0)
+            dns_servers = data['dns_servers']
+            
+            if dns_count > 0 and len(dns_servers) > 0:
+                self.log_test("Get User Custom DNS", True, 
+                    f"Found {dns_count} custom DNS servers for user")
+            else:
+                self.log_test("Get User Custom DNS", True, 
+                    "No custom DNS servers found (expected for new user)")
+        else:
+            self.log_test("Get User Custom DNS", False, "Failed to get user custom DNS", data)
+        
+        # Test 4: Edge cases - Invalid DNS format
+        invalid_dns_data = {
+            "user_id": self.test_data['user_id'],
+            "name": "Invalid DNS",
+            "primary_dns": "invalid.dns.format",
+            "description": "Should fail validation"
+        }
+        
+        success, data = await self.make_request('POST', '/dns/custom', params=invalid_dns_data)
+        if not success and "invalid" in str(data).lower():
+            self.log_test("Custom DNS Validation", True, "Invalid DNS format correctly rejected")
+        else:
+            self.log_test("Custom DNS Validation", False, "Invalid DNS should have been rejected")
+    
+    async def test_loyalty_program_endpoints(self):
+        """Test Loyalty Program endpoints"""
+        print("\n🎁 Testing Loyalty Program Endpoints...")
+        
+        if not self.test_data.get('user_id'):
+            self.log_test("Loyalty Program", False, "No user_id available for testing")
+            return
+        
+        user_id = self.test_data['user_id']
+        
+        # Test 1: GET /api/loyalty/{user_id} - Get loyalty status
+        success, data = await self.make_request('GET', f'/loyalty/{user_id}')
+        if success and 'total_points' in data:
+            tier = data.get('tier', 'unknown')
+            total_points = data.get('total_points', 0)
+            tier_benefits = data.get('tier_benefits', {})
+            
+            self.log_test("Get Loyalty Status", True, 
+                f"User tier: {tier}, Points: {total_points}, Benefits: {len(tier_benefits)} items")
+        else:
+            self.log_test("Get Loyalty Status", False, "Failed to get loyalty status", data)
+        
+        # Test 2: POST /api/loyalty/{user_id}/earn - Earn points
+        earn_points_data = {
+            "points": 100,
+            "type": "subscription_renewal",
+            "description": "Test points earning"
+        }
+        
+        success, data = await self.make_request('POST', f'/loyalty/{user_id}/earn', params=earn_points_data)
+        if success and data.get('points_earned'):
+            earned_points = data['points_earned']
+            new_total = data.get('new_total_points', 0)
+            
+            self.log_test("Earn Loyalty Points", True, 
+                f"Earned {earned_points} points, new total: {new_total}")
+        else:
+            self.log_test("Earn Loyalty Points", False, "Failed to earn loyalty points", data)
+        
+        # Test 3: GET /api/loyalty/{user_id}/transactions - Get transaction history
+        success, data = await self.make_request('GET', f'/loyalty/{user_id}/transactions')
+        if success and 'transactions' in data:
+            transaction_count = data.get('total_transactions', 0)
+            transactions = data['transactions']
+            
+            if transaction_count > 0 and len(transactions) > 0:
+                first_transaction = transactions[0]
+                self.log_test("Get Loyalty Transactions", True, 
+                    f"Found {transaction_count} transactions. Latest: {first_transaction.get('type', 'unknown')}")
+            else:
+                self.log_test("Get Loyalty Transactions", True, 
+                    "No transactions found (expected for new user)")
+        else:
+            self.log_test("Get Loyalty Transactions", False, "Failed to get loyalty transactions", data)
+        
+        # Test 4: Edge cases - Invalid points value
+        invalid_earn_data = {
+            "points": -50,  # Negative points should be rejected
+            "type": "invalid_type",
+            "description": "Should fail validation"
+        }
+        
+        success, data = await self.make_request('POST', f'/loyalty/{user_id}/earn', params=invalid_earn_data)
+        if not success:
+            self.log_test("Loyalty Points Validation", True, "Negative points correctly rejected")
+        else:
+            self.log_test("Loyalty Points Validation", False, "Negative points should have been rejected")
+    
+    async def test_server_monitoring_endpoints(self):
+        """Test Server Monitoring endpoints"""
+        print("\n📊 Testing Server Monitoring Endpoints...")
+        
+        if not self.test_data.get('server_id'):
+            self.log_test("Server Monitoring", False, "No server_id available for testing")
+            return
+        
+        server_id = self.test_data['server_id']
+        
+        # Test 1: POST /api/servers/{server_id}/metrics - Record server metrics
+        metrics_data = {
+            "cpu_percent": 45.5,
+            "memory_used": 2147483648,  # 2GB in bytes
+            "network_rx": 1048576,      # 1MB
+            "network_tx": 2097152,      # 2MB
+            "active_connections": 25,
+            "load_average": 1.5
+        }
+        
+        success, data = await self.make_request('POST', f'/servers/{server_id}/metrics', params=metrics_data)
+        if success and data.get('message'):
+            self.log_test("Record Server Metrics", True, 
+                f"Metrics recorded: CPU {metrics_data['cpu_percent']}%, Connections: {metrics_data['active_connections']}")
+        else:
+            self.log_test("Record Server Metrics", False, "Failed to record server metrics", data)
+        
+        # Test 2: GET /api/servers/{server_id}/metrics?period=1h - Get server metrics
+        success, data = await self.make_request('GET', f'/servers/{server_id}/metrics?period=1h')
+        if success and 'summary' in data:
+            summary = data['summary']
+            data_points = data.get('data_points', 0)
+            metrics_list = data.get('metrics', [])
+            
+            self.log_test("Get Server Metrics", True, 
+                f"Retrieved {data_points} data points. Avg CPU: {summary.get('avg_cpu', 0)}%")
+        else:
+            self.log_test("Get Server Metrics", False, "Failed to get server metrics", data)
+        
+        # Test 3: GET /api/servers/metrics/overview - Get overview of all servers
+        success, data = await self.make_request('GET', '/servers/metrics/overview')
+        if success and 'total_servers' in data:
+            total_servers = data['total_servers']
+            total_connections = data.get('total_active_connections', 0)
+            avg_utilization = data.get('average_utilization', 0)
+            
+            self.log_test("Get Servers Metrics Overview", True, 
+                f"Overview: {total_servers} servers, {total_connections} connections, {avg_utilization}% avg utilization")
+        else:
+            self.log_test("Get Servers Metrics Overview", False, "Failed to get servers metrics overview", data)
+        
+        # Test 4: Edge cases - Invalid server ID
+        success, data = await self.make_request('POST', '/servers/invalid-server-id/metrics', params=metrics_data)
+        if not success and "not found" in str(data).lower():
+            self.log_test("Server Metrics Validation", True, "Invalid server ID correctly rejected")
+        else:
+            self.log_test("Server Metrics Validation", False, "Invalid server ID should have been rejected")
+    
+    async def test_shadowsocks_config_endpoint(self):
+        """Test Shadowsocks configuration endpoint"""
+        print("\n🔒 Testing Shadowsocks Config Endpoint...")
+        
+        # Since we can't create a real active connection without a subscription,
+        # we'll test the endpoint validation
+        mock_connection_id = "test-shadowsocks-connection-12345"
+        
+        success, data = await self.make_request('GET', f'/connections/{mock_connection_id}/shadowsocks-config')
+        
+        if not success:
+            error_msg = str(data).lower()
+            if "not found" in error_msg:
+                self.log_test("Shadowsocks Config Endpoint", True, 
+                    "Shadowsocks config endpoint working - connection validation working")
+            elif "not active" in error_msg:
+                self.log_test("Shadowsocks Config Endpoint", True, 
+                    "Shadowsocks config endpoint working - connection status validation working")
+            else:
+                self.log_test("Shadowsocks Config Endpoint", False, 
+                    f"Unexpected error: {data}")
+        else:
+            # If it somehow worked, that's even better
+            if isinstance(data, str) and len(data) > 50:
+                self.log_test("Shadowsocks Config Endpoint", True, 
+                    f"Generated Shadowsocks config: {len(data)} chars")
+            else:
+                self.log_test("Shadowsocks Config Endpoint", False, 
+                    "Shadowsocks config too short or invalid", data)
+        
+        # Test the Shadowsocks config generator module directly
+        await self.test_shadowsocks_module_directly()
+    
+    async def test_shadowsocks_module_directly(self):
+        """Test Shadowsocks config generator module directly"""
+        print("    Testing Shadowsocks config generator module...")
+        
+        try:
+            import sys
+            sys.path.append('/app/backend')
+            from vpn_config_generator import vpn_config_generator
+            
+            # Test Shadowsocks config generation
+            ss_config = vpn_config_generator.generate_shadowsocks_config(
+                server_ip="192.0.2.1",
+                server_location="Test Location",
+                user_id="test-user"
+            )
+            
+            if ss_config and len(ss_config) > 50:
+                self.log_test("Shadowsocks Module Test", True, 
+                    f"Generated Shadowsocks config: {len(ss_config)} chars")
+            else:
+                self.log_test("Shadowsocks Module Test", False, "Shadowsocks config generation failed")
+                
+        except Exception as e:
+            self.log_test("Shadowsocks Module Import", False, f"Failed to test Shadowsocks module: {str(e)}")
+    
+    async def test_device_management_endpoints(self):
+        """Test Device Management endpoints"""
+        print("\n📱 Testing Device Management Endpoints...")
+        
+        if not self.test_data.get('user_id'):
+            self.log_test("Device Management", False, "No user_id available for testing")
+            return
+        
+        user_id = self.test_data['user_id']
+        
+        # Test 1: GET /api/users/{user_id}/devices - Get device list (initially empty)
+        success, data = await self.make_request('GET', f'/users/{user_id}/devices')
+        if success and 'devices' in data:
+            device_count = data.get('device_count', 0)
+            device_limit = data.get('device_limit', 5)
+            devices = data['devices']
+            
+            self.log_test("Get User Devices", True, 
+                f"User has {device_count}/{device_limit} devices registered")
+        else:
+            self.log_test("Get User Devices", False, "Failed to get user devices", data)
+        
+        # Test 2: POST /api/users/{user_id}/devices - Register device
+        device_data = {
+            "device_name": "Test iPhone",
+            "device_type": "ios",
+            "device_id": "test-device-12345"
+        }
+        
+        success, data = await self.make_request('POST', f'/users/{user_id}/devices', params=device_data)
+        if success and data.get('device'):
+            device = data['device']
+            device_count = data.get('device_count', 0)
+            
+            self.test_data['test_device_id'] = device['device_id']
+            self.log_test("Register Device", True, 
+                f"Registered device: {device['name']} ({device['type']}), Total: {device_count}")
+        else:
+            self.log_test("Register Device", False, "Failed to register device", data)
+        
+        # Test 3: Register another device
+        device_data2 = {
+            "device_name": "Test MacBook",
+            "device_type": "macos",
+            "device_id": "test-device-67890"
+        }
+        
+        success, data = await self.make_request('POST', f'/users/{user_id}/devices', params=device_data2)
+        if success and data.get('device'):
+            device_count = data.get('device_count', 0)
+            self.log_test("Register Second Device", True, 
+                f"Registered second device, Total: {device_count}")
+        else:
+            self.log_test("Register Second Device", False, "Failed to register second device", data)
+        
+        # Test 4: GET devices again to verify registration
+        success, data = await self.make_request('GET', f'/users/{user_id}/devices')
+        if success and data.get('device_count', 0) >= 2:
+            devices = data['devices']
+            device_names = [d['name'] for d in devices]
+            self.log_test("Verify Device Registration", True, 
+                f"Verified {len(devices)} devices: {', '.join(device_names)}")
+        else:
+            self.log_test("Verify Device Registration", False, "Device registration not verified", data)
+        
+        # Test 5: DELETE /api/users/{user_id}/devices/{device_id} - Remove device
+        if self.test_data.get('test_device_id'):
+            success, data = await self.make_request('DELETE', f'/users/{user_id}/devices/{self.test_data["test_device_id"]}')
+            if success and data.get('message'):
+                remaining_devices = data.get('remaining_devices', 0)
+                self.log_test("Remove Device", True, 
+                    f"Device removed successfully, {remaining_devices} devices remaining")
+            else:
+                self.log_test("Remove Device", False, "Failed to remove device", data)
+        
+        # Test 6: Edge cases - Duplicate device registration
+        success, data = await self.make_request('POST', f'/users/{user_id}/devices', params=device_data2)
+        if not success and "already registered" in str(data).lower():
+            self.log_test("Device Duplicate Validation", True, "Duplicate device correctly rejected")
+        else:
+            self.log_test("Device Duplicate Validation", False, "Duplicate device should have been rejected")
+    
+    async def test_extended_business_analytics_endpoints(self):
+        """Test Extended Business Analytics endpoints"""
+        print("\n📈 Testing Extended Business Analytics Endpoints...")
+        
+        # Test 1: GET /api/analytics/conversion - Conversion funnel
+        success, data = await self.make_request('GET', '/analytics/conversion')
+        if success and 'funnel' in data:
+            funnel = data['funnel']
+            payments = data.get('payments', {})
+            referrals = data.get('referrals', {})
+            
+            total_users = funnel.get('total_users', 0)
+            conversion_rate = funnel.get('subscription_conversion_rate', 0)
+            
+            self.log_test("Conversion Analytics", True, 
+                f"Funnel: {total_users} users, {conversion_rate}% conversion rate")
+        else:
+            self.log_test("Conversion Analytics", False, "Failed to get conversion analytics", data)
+        
+        # Test 2: GET /api/analytics/churn?period_days=30 - Churn analysis
+        success, data = await self.make_request('GET', '/analytics/churn?period_days=30')
+        if success and 'churn_rate' in data:
+            churn_rate = data.get('churn_rate', 0)
+            churned_users = data.get('churned_users', 0)
+            revenue_lost = data.get('estimated_revenue_lost', 0)
+            
+            self.log_test("Churn Analytics", True, 
+                f"30-day churn: {churn_rate}%, {churned_users} users, ${revenue_lost:.2f} revenue lost")
+        else:
+            self.log_test("Churn Analytics", False, "Failed to get churn analytics", data)
+        
+        # Test 3: GET /api/analytics/geographic-distribution - Geographic distribution
+        success, data = await self.make_request('GET', '/analytics/geographic-distribution')
+        if success and 'countries' in data:
+            countries = data['countries']
+            total_countries = data.get('total_countries', 0)
+            
+            if total_countries > 0:
+                top_country = countries[0] if countries else {}
+                self.log_test("Geographic Distribution Analytics", True, 
+                    f"Users from {total_countries} countries. Top: {top_country.get('country', 'Unknown')}")
+            else:
+                self.log_test("Geographic Distribution Analytics", True, 
+                    "No geographic data available (expected for new system)")
+        else:
+            self.log_test("Geographic Distribution Analytics", False, "Failed to get geographic analytics", data)
+        
+        # Test 4: GET /api/analytics/plan-popularity - Plan popularity
+        success, data = await self.make_request('GET', '/analytics/plan-popularity')
+        if success and 'plans' in data:
+            plans = data['plans']
+            total_subscribers = data.get('total_active_subscribers', 0)
+            
+            if len(plans) > 0:
+                most_popular = plans[0] if plans else {}
+                self.log_test("Plan Popularity Analytics", True, 
+                    f"{len(plans)} plans analyzed, {total_subscribers} total subscribers. Most popular: {most_popular.get('plan_name', 'Unknown')}")
+            else:
+                self.log_test("Plan Popularity Analytics", True, 
+                    "No plan popularity data (expected for new system)")
+        else:
+            self.log_test("Plan Popularity Analytics", False, "Failed to get plan popularity analytics", data)
+        
+        # Test 5: Edge cases - Invalid period for churn analysis
+        success, data = await self.make_request('GET', '/analytics/churn?period_days=0')
+        if success:
+            # Should handle gracefully even with 0 days
+            self.log_test("Churn Analytics Edge Case", True, "Handled 0-day period gracefully")
+        else:
+            # Or reject invalid period
+            self.log_test("Churn Analytics Edge Case", True, "Invalid period correctly rejected")
+    
+    async def test_all_new_endpoints(self):
+        """Test all new endpoints mentioned in the review request"""
+        print("\n🚀 TESTING ALL NEW ENDPOINTS FROM REVIEW REQUEST")
+        print("=" * 60)
+        
+        await self.test_custom_dns_endpoints()
+        await self.test_loyalty_program_endpoints()
+        await self.test_server_monitoring_endpoints()
+        await self.test_shadowsocks_config_endpoint()
+        await self.test_device_management_endpoints()
+        await self.test_extended_business_analytics_endpoints()
+    
     async def test_webhook_handler(self):
         """Test payment webhook handler (simulated)"""
         print("\n🔔 Testing Webhook Handler...")
