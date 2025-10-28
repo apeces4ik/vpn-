@@ -287,6 +287,180 @@ const Dashboard = ({ user, logout }) => {
           </div>
         </div>
 
+        {/* Quick Links Menu */}
+        <div className="quick-links-section" style={{
+          background: 'rgba(255, 255, 255, 0.03)',
+          borderRadius: '16px',
+          padding: '24px',
+          marginBottom: '32px',
+          border: '1px solid rgba(255, 255, 255, 0.1)'
+        }}>
+          <h3 style={{
+            color: 'white',
+            fontSize: '18px',
+            fontWeight: '600',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <Settings size={20} />
+            Quick Access
+          </h3>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '12px'
+          }}>
+            <button
+              onClick={() => navigate('/devices')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '12px 16px',
+                background: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '8px',
+                color: 'white',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)'}
+              onMouseOut={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'}
+            >
+              <Smartphone size={18} style={{ color: '#60A5FA' }} />
+              <span>Devices</span>
+            </button>
+            
+            <button
+              onClick={() => navigate('/loyalty')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '12px 16px',
+                background: 'rgba(168, 85, 247, 0.1)',
+                border: '1px solid rgba(168, 85, 247, 0.3)',
+                borderRadius: '8px',
+                color: 'white',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.background = 'rgba(168, 85, 247, 0.2)'}
+              onMouseOut={(e) => e.currentTarget.style.background = 'rgba(168, 85, 247, 0.1)'}
+            >
+              <Award size={18} style={{ color: '#C084FC' }} />
+              <span>Rewards</span>
+            </button>
+
+            <button
+              onClick={() => navigate('/dns')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '12px 16px',
+                background: 'rgba(34, 197, 94, 0.1)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+                borderRadius: '8px',
+                color: 'white',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.background = 'rgba(34, 197, 94, 0.2)'}
+              onMouseOut={(e) => e.currentTarget.style.background = 'rgba(34, 197, 94, 0.1)'}
+            >
+              <Globe size={18} style={{ color: '#4ADE80' }} />
+              <span>DNS Settings</span>
+            </button>
+
+            <button
+              onClick={() => navigate('/history')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '12px 16px',
+                background: 'rgba(99, 102, 241, 0.1)',
+                border: '1px solid rgba(99, 102, 241, 0.3)',
+                borderRadius: '8px',
+                color: 'white',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)'}
+              onMouseOut={(e) => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)'}
+            >
+              <Wifi size={18} style={{ color: '#818CF8' }} />
+              <span>Connection History</span>
+            </button>
+
+            <button
+              onClick={() => navigate('/referral')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '12px 16px',
+                background: 'rgba(236, 72, 153, 0.1)',
+                border: '1px solid rgba(236, 72, 153, 0.3)',
+                borderRadius: '8px',
+                color: 'white',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.background = 'rgba(236, 72, 153, 0.2)'}
+              onMouseOut={(e) => e.currentTarget.style.background = 'rgba(236, 72, 153, 0.1)'}
+            >
+              <Users size={18} style={{ color: '#F472B6' }} />
+              <span>Refer Friends</span>
+            </button>
+
+            <button
+              onClick={() => navigate('/support')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '12px 16px',
+                background: 'rgba(251, 146, 60, 0.1)',
+                border: '1px solid rgba(251, 146, 60, 0.3)',
+                borderRadius: '8px',
+                color: 'white',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.background = 'rgba(251, 146, 60, 0.2)'}
+              onMouseOut={(e) => e.currentTarget.style.background = 'rgba(251, 146, 60, 0.1)'}
+            >
+              <LifeBuoy size={18} style={{ color: '#FB923C' }} />
+              <span>Support</span>
+            </button>
+
+            <button
+              onClick={() => navigate('/monitoring')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '12px 16px',
+                background: 'rgba(6, 182, 212, 0.1)',
+                border: '1px solid rgba(6, 182, 212, 0.3)',
+                borderRadius: '8px',
+                color: 'white',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.background = 'rgba(6, 182, 212, 0.2)'}
+              onMouseOut={(e) => e.currentTarget.style.background = 'rgba(6, 182, 212, 0.1)'}
+            >
+              <Server size={18} style={{ color: '#22D3EE' }} />
+              <span>Server Status</span>
+            </button>
+          </div>
+        </div>
+
         {/* Servers List */}
         <div className="servers-section" data-testid="servers-section">
           <div className="section-header">
