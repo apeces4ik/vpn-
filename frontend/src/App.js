@@ -50,6 +50,12 @@ function App() {
     }
   };
 
+  const logout = () => {
+    localStorage.removeItem('anonvpn_user');
+    setUser(null);
+    toast.success('Logged out successfully');
+  };
+
   if (loading) {
     return (
       <div className="loading-screen">
