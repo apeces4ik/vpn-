@@ -97,6 +97,48 @@ function App() {
           <Route path="/team" element={<TeamDashboard />} />
           <Route path="/monitor" element={<ServerMonitor />} />
           <Route path="/vpn-providers" element={<VPNProviderManager />} />
+          
+          {/* New UI Routes */}
+          <Route 
+            path="/devices" 
+            element={user ? <DeviceManagement user={user} /> : <Navigate to="/" replace />} 
+          />
+          <Route 
+            path="/loyalty" 
+            element={user ? <LoyaltyProgram user={user} /> : <Navigate to="/" replace />} 
+          />
+          <Route 
+            path="/dns" 
+            element={user ? <CustomDNS user={user} /> : <Navigate to="/" replace />} 
+          />
+          <Route 
+            path="/history" 
+            element={user ? <ConnectionHistory user={user} /> : <Navigate to="/" replace />} 
+          />
+          <Route 
+            path="/referral" 
+            element={user ? <ReferralProgram user={user} /> : <Navigate to="/" replace />} 
+          />
+          <Route 
+            path="/affiliate" 
+            element={user ? <AffiliateDashboard user={user} /> : <Navigate to="/" replace />} 
+          />
+          <Route 
+            path="/support" 
+            element={user ? <SupportTickets user={user} /> : <Navigate to="/" replace />} 
+          />
+          <Route 
+            path="/branding" 
+            element={user ? <WhiteLabelBranding user={user} organizationId={user.organization_id} /> : <Navigate to="/" replace />} 
+          />
+          <Route 
+            path="/monitoring" 
+            element={<ServerMonitoringDashboard />} 
+          />
+          <Route 
+            path="/security" 
+            element={user ? <SecurityDashboard user={user} organizationId={user.organization_id} /> : <Navigate to="/" replace />} 
+          />
         </Routes>
       </BrowserRouter>
     </div>
