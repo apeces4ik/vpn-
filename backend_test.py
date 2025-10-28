@@ -2354,6 +2354,14 @@ async def main():
         # Test 6: Corporate Features Integration
         await tester.test_corporate_features_integration()
         
+        # ============= NEW ENDPOINTS TESTING (Review Request) =============
+        print("\n" + "="*60)
+        print("🆕 NEW ENDPOINTS TESTING - REVIEW REQUEST")
+        print("="*60)
+        
+        # Test all new endpoints mentioned in the review request
+        await tester.test_all_new_endpoints()
+        
         # Print summary
         passed, failed = tester.print_summary()
         
