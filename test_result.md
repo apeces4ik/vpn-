@@ -1217,6 +1217,8 @@ metadata:
   corporate_features_tested: true
   new_endpoints_implemented: true
   new_endpoints_tested: true
+  enterprise_endpoints_implemented: true
+  enterprise_endpoints_tested: true
   production_ready: true
 
 test_plan:
