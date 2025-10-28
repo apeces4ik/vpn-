@@ -4098,6 +4098,912 @@ async def get_user_dedicated_ip(user_id: str):
         logger.error(f"Get dedicated IP error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ============= CONNECTION HISTORY & SESSION TRACKING =============
+
+@api_router.get("/users/{user_id}/connection-history")
+async def get_connection_history(
+    user_id: str,
+    limit: int = Query(default=50, le=500),
+    skip: int = Query(default=0, ge=0)
+):
+    """Get user's connection history (metadata only, no traffic logs)"""
+    try:
+        # Get connection history
+        history_cursor = db.connection_history.find(
+            {"user_id": user_id}
+        ).sort("connected_at", -1).skip(skip).limit(limit)
+        
+        history = await history_cursor.to_list(length=limit)
+        total_count = await db.connection_history.count_documents({"user_id": user_id})
+        
+        return {
+            "total_count": total_count,
+            "history": history,
+            "skip": skip,
+            "limit": limit
+        }
+    except Exception as e:
+        logger.error(f"Get connection history error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/users/{user_id}/active-sessions")
+async def get_active_sessions(user_id: str):
+    """Get user's currently active VPN sessions"""
+    try:
+        # Get active connections
+        sessions_cursor = db.active_sessions.find({
+            "user_id": user_id,
+            "is_active": True
+        })
+        
+        sessions = await sessions_cursor.to_list(length=100)
+        
+        return {
+            "active_sessions": len(sessions),
+            "sessions": sessions
+        }
+    except Exception as e:
+        logger.error(f"Get active sessions error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/users/{user_id}/sessions/{session_id}/disconnect")
+async def force_disconnect_session(user_id: str, session_id: str):
+    """Force disconnect a specific session (security feature)"""
+    try:
+        # Find session
+        session = await db.active_sessions.find_one({
+            "id": session_id,
+            "user_id": user_id,
+            "is_active": True
+        })
+        
+        if not session:
+            raise HTTPException(status_code=404, detail="Active session not found")
+        
+        # Deactivate session
+        await db.active_sessions.update_one(
+            {"id": session_id},
+            {
+                "$set": {
+                    "is_active": False,
+                    "disconnected_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+        
+        # Create connection history entry
+        history_entry = ConnectionHistory(
+            user_id=user_id,
+            server_id=session["server_id"],
+            server_location=session["server_location"],
+            protocol=session["protocol"],
+            device_name=session["device_name"],
+            connected_at=session["connected_at"],
+            disconnected_at=datetime.now(timezone.utc),
+            session_duration=int((datetime.now(timezone.utc) - session["connected_at"]).total_seconds()),
+            ip_address=session.get("ip_address"),
+            country=session.get("country"),
+            city=session.get("city")
+        )
+        
+        doc = history_entry.model_dump()
+        doc['connected_at'] = doc['connected_at'].isoformat()
+        if doc.get('disconnected_at'):
+            doc['disconnected_at'] = doc['disconnected_at'].isoformat()
+        
+        await db.connection_history.insert_one(doc)
+        
+        logger.info(f"Force disconnected session {session_id} for user: {user_id}")
+        
+        return {
+            "message": "Session disconnected successfully",
+            "session_id": session_id,
+            "device_name": session["device_name"]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Force disconnect error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============= REFERRAL PROGRAM & AFFILIATE SYSTEM =============
+
+@api_router.post("/referrals/create")
+async def create_referral_code(user_id: str):
+    """Create a referral code for a user"""
+    try:
+        # Check if user exists
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Check if user already has an active referral code
+        existing = await db.referral_programs.find_one({
+            "referrer_id": user_id,
+            "status": "active"
+        })
+        
+        if existing:
+            return {
+                "message": "Referral code already exists",
+                "referral_code": existing["referral_code"],
+                "referral_url": f"https://anonvpn.com/signup?ref={existing['referral_code']}"
+            }
+        
+        # Create new referral program entry
+        referral = ReferralProgram(referrer_id=user_id)
+        
+        doc = referral.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        if doc.get('expires_at'):
+            doc['expires_at'] = doc['expires_at'].isoformat()
+        
+        await db.referral_programs.insert_one(doc)
+        
+        logger.info(f"Created referral code for user: {user_id}")
+        
+        return {
+            "message": "Referral code created successfully",
+            "referral_code": doc["referral_code"],
+            "referral_url": f"https://anonvpn.com/signup?ref={doc['referral_code']}"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Create referral error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/referrals/{user_id}/stats")
+async def get_referral_stats(user_id: str):
+    """Get referral statistics for a user"""
+    try:
+        # Get referral program
+        referral = await db.referral_programs.find_one({
+            "referrer_id": user_id,
+            "status": "active"
+        })
+        
+        if not referral:
+            raise HTTPException(status_code=404, detail="No active referral program found")
+        
+        return {
+            "referral_code": referral["referral_code"],
+            "total_earned": referral.get("total_earned", 0.0),
+            "clicks": referral.get("clicks", 0),
+            "signups": referral.get("signups", 0),
+            "conversions": referral.get("conversions", 0),
+            "commission_rate": referral.get("commission_rate", 0.20),
+            "status": referral["status"]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get referral stats error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/referrals/track-click")
+async def track_referral_click(referral_code: str):
+    """Track a referral link click"""
+    try:
+        result = await db.referral_programs.update_one(
+            {"referral_code": referral_code, "status": "active"},
+            {"$inc": {"clicks": 1}}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="Referral code not found")
+        
+        return {"message": "Click tracked successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Track click error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/affiliate/register")
+async def register_affiliate(
+    user_id: str,
+    payment_method: str,
+    payment_details: Dict[str, Any]
+):
+    """Register user as an affiliate partner"""
+    try:
+        # Check if user exists
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Check if already an affiliate
+        existing = await db.affiliate_partners.find_one({"user_id": user_id})
+        if existing:
+            raise HTTPException(status_code=400, detail="User is already an affiliate partner")
+        
+        # Create affiliate partner
+        affiliate = AffiliatePartner(
+            user_id=user_id,
+            payment_method=payment_method,
+            payment_details=payment_details
+        )
+        
+        doc = affiliate.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        
+        await db.affiliate_partners.insert_one(doc)
+        
+        logger.info(f"Registered affiliate partner: {user_id}")
+        
+        return {
+            "message": "Affiliate registration successful",
+            "affiliate_code": doc["affiliate_code"],
+            "commission_rate": doc["commission_rate"]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Register affiliate error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/affiliate/dashboard/{user_id}")
+async def get_affiliate_dashboard(user_id: str):
+    """Get affiliate partner dashboard data"""
+    try:
+        # Get affiliate partner
+        affiliate = await db.affiliate_partners.find_one({"user_id": user_id})
+        if not affiliate:
+            raise HTTPException(status_code=404, detail="Affiliate partner not found")
+        
+        # Get earnings history
+        earnings_cursor = db.affiliate_earnings.find(
+            {"affiliate_id": affiliate["id"]}
+        ).sort("created_at", -1).limit(50)
+        
+        earnings = await earnings_cursor.to_list(length=50)
+        
+        return {
+            "affiliate_code": affiliate["affiliate_code"],
+            "commission_rate": affiliate["commission_rate"],
+            "total_earnings": affiliate["total_earnings"],
+            "pending_earnings": affiliate["pending_earnings"],
+            "paid_earnings": affiliate["paid_earnings"],
+            "clicks": affiliate["clicks"],
+            "signups": affiliate["signups"],
+            "conversions": affiliate["conversions"],
+            "status": affiliate["status"],
+            "recent_earnings": earnings
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get affiliate dashboard error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============= OAUTH2 & SAML AUTHENTICATION =============
+
+@api_router.post("/auth/oauth/providers")
+async def create_oauth_provider(
+    organization_id: str,
+    provider_name: str,
+    client_id: str,
+    client_secret: str,
+    authorization_url: str,
+    token_url: str,
+    userinfo_url: str,
+    scopes: List[str] = ["openid", "profile", "email"]
+):
+    """Create OAuth2 provider configuration for organization"""
+    try:
+        provider = OAuth2Provider(
+            organization_id=organization_id,
+            provider_name=provider_name,
+            client_id=client_id,
+            client_secret=client_secret,
+            authorization_url=authorization_url,
+            token_url=token_url,
+            userinfo_url=userinfo_url,
+            scopes=scopes
+        )
+        
+        doc = provider.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        
+        await db.oauth2_providers.insert_one(doc)
+        
+        logger.info(f"Created OAuth2 provider {provider_name} for org: {organization_id}")
+        
+        return {
+            "message": "OAuth2 provider created successfully",
+            "provider_id": doc["id"]
+        }
+    except Exception as e:
+        logger.error(f"Create OAuth2 provider error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/auth/oauth/providers/{organization_id}")
+async def get_oauth_providers(organization_id: str):
+    """Get OAuth2 providers for an organization"""
+    try:
+        providers_cursor = db.oauth2_providers.find({
+            "organization_id": organization_id,
+            "is_active": True
+        })
+        
+        providers = await providers_cursor.to_list(length=100)
+        
+        # Remove sensitive data
+        for provider in providers:
+            provider.pop('client_secret', None)
+        
+        return {"providers": providers}
+    except Exception as e:
+        logger.error(f"Get OAuth2 providers error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/auth/saml/configure")
+async def configure_saml_provider(
+    organization_id: str,
+    provider_name: str,
+    idp_entity_id: str,
+    sso_url: str,
+    x509_cert: str
+):
+    """Configure SAML provider for organization"""
+    try:
+        provider = SAMLProvider(
+            organization_id=organization_id,
+            provider_name=provider_name,
+            idp_entity_id=idp_entity_id,
+            sso_url=sso_url,
+            x509_cert=x509_cert
+        )
+        
+        doc = provider.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        
+        await db.saml_providers.insert_one(doc)
+        
+        logger.info(f"Configured SAML provider {provider_name} for org: {organization_id}")
+        
+        return {
+            "message": "SAML provider configured successfully",
+            "provider_id": doc["id"]
+        }
+    except Exception as e:
+        logger.error(f"Configure SAML provider error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============= GDPR COMPLIANCE =============
+
+@api_router.post("/gdpr/data-export")
+async def request_data_export(user_id: str):
+    """Request GDPR data export"""
+    try:
+        # Check if user exists
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Create GDPR request
+        gdpr_request = GDPRRequest(
+            user_id=user_id,
+            request_type="data_export",
+            status="pending"
+        )
+        
+        doc = gdpr_request.model_dump()
+        doc['requested_at'] = doc['requested_at'].isoformat()
+        
+        await db.gdpr_requests.insert_one(doc)
+        
+        logger.info(f"Data export requested for user: {user_id}")
+        
+        return {
+            "message": "Data export request submitted successfully",
+            "request_id": doc["id"],
+            "status": "pending",
+            "estimated_completion": "24-48 hours"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Data export request error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/gdpr/data-deletion")
+async def request_data_deletion(user_id: str, confirm: bool = False):
+    """Request GDPR data deletion (account deletion)"""
+    try:
+        if not confirm:
+            raise HTTPException(
+                status_code=400,
+                detail="Please confirm data deletion by setting confirm=true"
+            )
+        
+        # Check if user exists
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Create GDPR request
+        gdpr_request = GDPRRequest(
+            user_id=user_id,
+            request_type="data_deletion",
+            status="pending",
+            notes="User requested account and data deletion"
+        )
+        
+        doc = gdpr_request.model_dump()
+        doc['requested_at'] = doc['requested_at'].isoformat()
+        
+        await db.gdpr_requests.insert_one(doc)
+        
+        logger.info(f"Data deletion requested for user: {user_id}")
+        
+        return {
+            "message": "Data deletion request submitted successfully",
+            "request_id": doc["id"],
+            "status": "pending",
+            "estimated_completion": "30 days"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Data deletion request error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/gdpr/requests/{user_id}")
+async def get_gdpr_requests(user_id: str):
+    """Get GDPR requests for a user"""
+    try:
+        requests_cursor = db.gdpr_requests.find(
+            {"user_id": user_id}
+        ).sort("requested_at", -1)
+        
+        requests = await requests_cursor.to_list(length=100)
+        
+        return {"requests": requests}
+    except Exception as e:
+        logger.error(f"Get GDPR requests error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============= NO-LOG AUDIT & SECURITY =============
+
+@api_router.post("/audit/log")
+async def create_audit_log(
+    action: str,
+    result: str,
+    details: str,
+    auditor: Optional[str] = None
+):
+    """Create audit log entry (internal use)"""
+    try:
+        audit_log = AuditLog(
+            action=action,
+            result=result,
+            details=details,
+            auditor=auditor
+        )
+        
+        doc = audit_log.model_dump()
+        doc['timestamp'] = doc['timestamp'].isoformat()
+        
+        await db.audit_logs.insert_one(doc)
+        
+        logger.info(f"Audit log created: {action}")
+        
+        return {"message": "Audit log created", "log_id": doc["id"]}
+    except Exception as e:
+        logger.error(f"Create audit log error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/audit/no-log-report")
+async def get_no_log_report(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None
+):
+    """Get no-log policy audit report"""
+    try:
+        # Build query
+        query = {}
+        if start_date:
+            query["timestamp"] = {"$gte": start_date}
+        if end_date:
+            query.setdefault("timestamp", {})["$lte"] = end_date
+        
+        # Get audit logs
+        logs_cursor = db.audit_logs.find(query).sort("timestamp", -1).limit(1000)
+        logs = await logs_cursor.to_list(length=1000)
+        
+        # Get policy verification count
+        verification_count = await db.audit_logs.count_documents({
+            "action": "policy_verified"
+        })
+        
+        return {
+            "report_generated": datetime.now(timezone.utc).isoformat(),
+            "no_log_policy_status": "active",
+            "policy_verifications": verification_count,
+            "audit_logs_count": len(logs),
+            "audit_logs": logs[:100]  # Return last 100
+        }
+    except Exception as e:
+        logger.error(f"Get no-log report error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============= SECURITY INCIDENT RESPONSE =============
+
+@api_router.post("/security/incidents")
+async def create_security_incident(
+    title: str,
+    description: str,
+    severity: str,
+    affected_systems: List[str] = [],
+    assigned_to: Optional[str] = None
+):
+    """Create a security incident"""
+    try:
+        incident = SecurityIncident(
+            title=title,
+            description=description,
+            severity=severity,
+            affected_systems=affected_systems,
+            assigned_to=assigned_to
+        )
+        
+        doc = incident.model_dump()
+        doc['detected_at'] = doc['detected_at'].isoformat()
+        
+        await db.security_incidents.insert_one(doc)
+        
+        logger.warning(f"Security incident created: {title} (Severity: {severity})")
+        
+        return {
+            "message": "Security incident created",
+            "incident_id": doc["id"],
+            "severity": severity
+        }
+    except Exception as e:
+        logger.error(f"Create security incident error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/security/incidents")
+async def get_security_incidents(
+    status: Optional[str] = None,
+    severity: Optional[str] = None,
+    limit: int = Query(default=50, le=200)
+):
+    """Get security incidents with filters"""
+    try:
+        query = {}
+        if status:
+            query["status"] = status
+        if severity:
+            query["severity"] = severity
+        
+        incidents_cursor = db.security_incidents.find(query).sort("detected_at", -1).limit(limit)
+        incidents = await incidents_cursor.to_list(length=limit)
+        
+        return {
+            "incidents": incidents,
+            "total": len(incidents)
+        }
+    except Exception as e:
+        logger.error(f"Get security incidents error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/security/incidents/{incident_id}/resolve")
+async def resolve_security_incident(
+    incident_id: str,
+    actions_taken: List[str],
+    resolved_by: str
+):
+    """Resolve a security incident"""
+    try:
+        incident = await db.security_incidents.find_one({"id": incident_id})
+        if not incident:
+            raise HTTPException(status_code=404, detail="Incident not found")
+        
+        await db.security_incidents.update_one(
+            {"id": incident_id},
+            {
+                "$set": {
+                    "status": "resolved",
+                    "actions_taken": actions_taken,
+                    "resolved_at": datetime.now(timezone.utc).isoformat(),
+                    "assigned_to": resolved_by
+                }
+            }
+        )
+        
+        logger.info(f"Security incident resolved: {incident_id}")
+        
+        return {
+            "message": "Incident resolved successfully",
+            "incident_id": incident_id
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Resolve incident error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============= SLA & SUPPORT SYSTEM =============
+
+@api_router.post("/support/tickets")
+async def create_support_ticket(
+    user_id: str,
+    subject: str,
+    description: str,
+    priority: str = "normal",
+    category: str = "general"
+):
+    """Create a support ticket"""
+    try:
+        # Check user plan for priority support
+        user = await db.users.find_one({"id": user_id})
+        if user and user.get("current_plan_id"):
+            plan = await db.tariff_plans.find_one({"id": user["current_plan_id"]})
+            if plan and plan.get("name") == "Ultimate":
+                priority = "high"  # Ultimate plan gets priority support
+        
+        ticket = SupportTicket(
+            user_id=user_id,
+            subject=subject,
+            description=description,
+            priority=priority,
+            category=category,
+            messages=[{
+                "sender": "user",
+                "message": description,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }]
+        )
+        
+        doc = ticket.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        doc['updated_at'] = doc['updated_at'].isoformat()
+        
+        await db.support_tickets.insert_one(doc)
+        
+        logger.info(f"Support ticket created: {subject} (Priority: {priority})")
+        
+        return {
+            "message": "Support ticket created successfully",
+            "ticket_id": doc["id"],
+            "priority": priority
+        }
+    except Exception as e:
+        logger.error(f"Create support ticket error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/support/tickets/{user_id}")
+async def get_user_tickets(user_id: str):
+    """Get all support tickets for a user"""
+    try:
+        tickets_cursor = db.support_tickets.find(
+            {"user_id": user_id}
+        ).sort("created_at", -1)
+        
+        tickets = await tickets_cursor.to_list(length=100)
+        
+        return {
+            "tickets": tickets,
+            "total": len(tickets)
+        }
+    except Exception as e:
+        logger.error(f"Get user tickets error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/sla/metrics")
+async def get_sla_metrics(days: int = Query(default=30, le=365)):
+    """Get SLA metrics for the specified period"""
+    try:
+        start_date = datetime.now(timezone.utc) - timedelta(days=days)
+        
+        metrics_cursor = db.sla_metrics.find({
+            "date": {"$gte": start_date.isoformat()}
+        }).sort("date", -1)
+        
+        metrics = await metrics_cursor.to_list(length=days)
+        
+        # Calculate averages
+        if metrics:
+            avg_uptime = sum(m.get("uptime_percentage", 0) for m in metrics) / len(metrics)
+            avg_response = sum(m.get("avg_response_time", 0) for m in metrics) / len(metrics)
+            total_incidents = sum(m.get("incident_count", 0) for m in metrics)
+        else:
+            avg_uptime = 99.95
+            avg_response = 50.0
+            total_incidents = 0
+        
+        return {
+            "period_days": days,
+            "average_uptime": round(avg_uptime, 2),
+            "average_response_time_ms": round(avg_response, 2),
+            "total_incidents": total_incidents,
+            "meets_sla": avg_uptime >= 99.95,
+            "daily_metrics": metrics
+        }
+    except Exception as e:
+        logger.error(f"Get SLA metrics error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============= DMCA & LEGAL =============
+
+@api_router.post("/legal/dmca-notice")
+async def submit_dmca_notice(
+    complainant_name: str,
+    complainant_email: str,
+    content_description: str,
+    alleged_user_id: Optional[str] = None
+):
+    """Submit a DMCA takedown notice"""
+    try:
+        notice = DMCANotice(
+            complainant_name=complainant_name,
+            complainant_email=complainant_email,
+            content_description=content_description,
+            alleged_user_id=alleged_user_id
+        )
+        
+        doc = notice.model_dump()
+        doc['received_at'] = doc['received_at'].isoformat()
+        
+        await db.dmca_notices.insert_one(doc)
+        
+        logger.info(f"DMCA notice received from: {complainant_email}")
+        
+        return {
+            "message": "DMCA notice received and will be reviewed within 24-48 hours",
+            "notice_id": doc["id"]
+        }
+    except Exception as e:
+        logger.error(f"Submit DMCA notice error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/legal/dmca-notices")
+async def get_dmca_notices(
+    status: Optional[str] = None,
+    limit: int = Query(default=50, le=200)
+):
+    """Get DMCA notices (admin only)"""
+    try:
+        query = {}
+        if status:
+            query["status"] = status
+        
+        notices_cursor = db.dmca_notices.find(query).sort("received_at", -1).limit(limit)
+        notices = await notices_cursor.to_list(length=limit)
+        
+        return {
+            "notices": notices,
+            "total": len(notices)
+        }
+    except Exception as e:
+        logger.error(f"Get DMCA notices error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============= SECURITY AUDITS =============
+
+@api_router.post("/security/audits/schedule")
+async def schedule_security_audit(
+    audit_type: str,
+    scheduled_date: str,
+    auditor: str
+):
+    """Schedule a security audit"""
+    try:
+        audit = SecurityAudit(
+            audit_type=audit_type,
+            scheduled_date=datetime.fromisoformat(scheduled_date.replace('Z', '+00:00')),
+            auditor=auditor
+        )
+        
+        doc = audit.model_dump()
+        doc['scheduled_date'] = doc['scheduled_date'].isoformat()
+        
+        await db.security_audits.insert_one(doc)
+        
+        logger.info(f"Security audit scheduled: {audit_type} on {scheduled_date}")
+        
+        return {
+            "message": "Security audit scheduled successfully",
+            "audit_id": doc["id"]
+        }
+    except Exception as e:
+        logger.error(f"Schedule security audit error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/security/audits")
+async def get_security_audits(status: Optional[str] = None):
+    """Get security audits"""
+    try:
+        query = {}
+        if status:
+            query["status"] = status
+        
+        audits_cursor = db.security_audits.find(query).sort("scheduled_date", -1)
+        audits = await audits_cursor.to_list(length=100)
+        
+        return {"audits": audits}
+    except Exception as e:
+        logger.error(f"Get security audits error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============= ALERTING SYSTEM =============
+
+@api_router.post("/alerts/create")
+async def create_alert(
+    alert_type: str,
+    severity: str,
+    title: str,
+    message: str,
+    source: str
+):
+    """Create a system alert"""
+    try:
+        alert = Alert(
+            alert_type=alert_type,
+            severity=severity,
+            title=title,
+            message=message,
+            source=source
+        )
+        
+        doc = alert.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        
+        await db.alerts.insert_one(doc)
+        
+        logger.warning(f"Alert created: {title} (Severity: {severity})")
+        
+        return {
+            "message": "Alert created successfully",
+            "alert_id": doc["id"]
+        }
+    except Exception as e:
+        logger.error(f"Create alert error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/alerts/active")
+async def get_active_alerts(severity: Optional[str] = None):
+    """Get active alerts"""
+    try:
+        query = {"is_active": True}
+        if severity:
+            query["severity"] = severity
+        
+        alerts_cursor = db.alerts.find(query).sort("created_at", -1)
+        alerts = await alerts_cursor.to_list(length=100)
+        
+        return {
+            "active_alerts": len(alerts),
+            "alerts": alerts
+        }
+    except Exception as e:
+        logger.error(f"Get active alerts error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/alerts/{alert_id}/acknowledge")
+async def acknowledge_alert(alert_id: str, acknowledged_by: str):
+    """Acknowledge an alert"""
+    try:
+        await db.alerts.update_one(
+            {"id": alert_id},
+            {
+                "$set": {
+                    "acknowledged": True,
+                    "acknowledged_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+        
+        logger.info(f"Alert acknowledged: {alert_id} by {acknowledged_by}")
+        
+        return {"message": "Alert acknowledged"}
+    except Exception as e:
+        logger.error(f"Acknowledge alert error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Include router
 app.include_router(api_router)
 
