@@ -4456,27 +4456,18 @@ async def get_affiliate_dashboard(user_id: str):
 # ============= OAUTH2 & SAML AUTHENTICATION =============
 
 @api_router.post("/auth/oauth/providers")
-async def create_oauth_provider(
-    organization_id: str,
-    provider_name: str,
-    client_id: str,
-    client_secret: str,
-    authorization_url: str,
-    token_url: str,
-    userinfo_url: str,
-    scopes: List[str] = ["openid", "profile", "email"]
-):
+async def create_oauth_provider(request: CreateOAuth2ProviderRequest):
     """Create OAuth2 provider configuration for organization"""
     try:
         provider = OAuth2Provider(
-            organization_id=organization_id,
-            provider_name=provider_name,
-            client_id=client_id,
-            client_secret=client_secret,
-            authorization_url=authorization_url,
-            token_url=token_url,
-            userinfo_url=userinfo_url,
-            scopes=scopes
+            organization_id=request.organization_id,
+            provider_name=request.provider_name,
+            client_id=request.client_id,
+            client_secret=request.client_secret,
+            authorization_url=request.authorization_url,
+            token_url=request.token_url,
+            userinfo_url=request.userinfo_url,
+            scopes=request.scopes
         )
         
         doc = provider.model_dump()
@@ -4484,7 +4475,7 @@ async def create_oauth_provider(
         
         await db.oauth2_providers.insert_one(doc)
         
-        logger.info(f"Created OAuth2 provider {provider_name} for org: {organization_id}")
+        logger.info(f"Created OAuth2 provider {request.provider_name} for org: {request.organization_id}")
         
         return {
             "message": "OAuth2 provider created successfully",
