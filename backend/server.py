@@ -1008,6 +1008,7 @@ async def get_vpn_config(connection_id: str, protocol: str = "wireguard"):
     - wireguard (default)
     - openvpn
     - ikev2
+    - shadowsocks
     """
     connection = await db.connections.find_one({"id": connection_id})
     if not connection:
@@ -1051,10 +1052,20 @@ async def get_vpn_config(connection_id: str, protocol: str = "wireguard"):
                 user_id=user['id'],
                 connection_id=connection_id
             )
+        elif protocol == "shadowsocks":
+            config = vpn_config_generator.generate_shadowsocks_config(
+                server_ip=server['ipv4_address'],
+                server_location=server['location'],
+                user_id=user['id']
+            )
+            config_data = {
+                'config': config,
+                'filename': f'shadowsocks_{server["location"].replace(" ", "_")}.txt'
+            }
         else:
             raise HTTPException(
                 status_code=400, 
-                detail=f"Unsupported protocol: {protocol}. Use wireguard, openvpn, or ikev2"
+                detail=f"Unsupported protocol: {protocol}. Use wireguard, openvpn, ikev2, or shadowsocks"
             )
         
         # Return as downloadable file
