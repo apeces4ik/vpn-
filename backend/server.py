@@ -1096,6 +1096,15 @@ async def get_supported_protocols():
                 "performance": "Very Good",
                 "compatibility": "iOS, macOS, Windows",
                 "recommended": False
+            },
+            {
+                "name": "Shadowsocks",
+                "id": "shadowsocks",
+                "description": "Secure SOCKS5 proxy for bypassing censorship",
+                "performance": "Excellent",
+                "compatibility": "All platforms",
+                "recommended": False,
+                "use_case": "Best for bypassing GFW and censorship"
             }
         ]
     }
