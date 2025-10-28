@@ -205,6 +205,65 @@ class SecurityEvent(BaseModel):
     metadata: Optional[Dict[str, Any]] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+# ============= ANALYTICS & MONITORING MODELS =============
+
+class ConnectionHistory(BaseModel):
+    """History of user connections (no traffic logs, only metadata)"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    server_id: str
+    server_location: str
+    protocol: str
+    device_name: str
+    connected_at: datetime
+    disconnected_at: Optional[datetime] = None
+    session_duration: Optional[int] = None  # seconds
+    ip_address: Optional[str] = None  # User's IP for geolocation only
+    country: Optional[str] = None
+    city: Optional[str] = None
+
+class ServerMetrics(BaseModel):
+    """Real-time server metrics for monitoring"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    server_id: str
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    cpu_percent: float
+    memory_used: int  # bytes
+    network_rx: int  # bytes received
+    network_tx: int  # bytes transmitted
+    active_connections: int
+    load_average: float
+
+class ReferralProgram(BaseModel):
+    """Referral tracking for user growth"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    referrer_id: str  # User who refers
+    referred_id: Optional[str] = None  # User who was referred (filled when they sign up)
+    referral_code: str = Field(default_factory=lambda: secrets.token_urlsafe(8))
+    commission_rate: float = 0.20  # 20% commission
+    total_earned: float = 0.0
+    status: str = "active"  # active, completed, expired
+    clicks: int = 0
+    signups: int = 0
+    conversions: int = 0  # Paid subscriptions
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    expires_at: Optional[datetime] = None
+
+class DedicatedIP(BaseModel):
+    """Dedicated IP addresses for premium users"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    ip_address: str
+    server_id: str
+    location: str
+    is_active: bool = True
+    assigned_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    expires_at: Optional[datetime] = None
+
 # ============= NOWPAYMENTS CLIENT =============
 
 class NOWPaymentsClient:
