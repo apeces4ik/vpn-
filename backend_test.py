@@ -2805,12 +2805,30 @@ async def main():
         # Test 6: Corporate Features Integration
         await tester.test_corporate_features_integration()
         
-        # ============= NEW ENDPOINTS TESTING (Review Request) =============
+        # ============= ENTERPRISE ENDPOINTS TESTING (Review Request) =============
         print("\n" + "="*60)
-        print("🆕 NEW ENDPOINTS TESTING - REVIEW REQUEST")
+        print("🏢 ENTERPRISE ENDPOINTS TESTING - PHASE 4")
         print("="*60)
         
-        # Test all new endpoints mentioned in the review request
+        # Test all enterprise endpoints mentioned in the review request
+        await tester.test_connection_history_and_sessions()
+        await tester.test_referral_program_and_affiliate()
+        await tester.test_oauth2_and_saml()
+        await tester.test_gdpr_compliance()
+        await tester.test_no_log_audit()
+        await tester.test_security_incidents()
+        await tester.test_sla_and_support()
+        await tester.test_dmca_and_legal()
+        await tester.test_security_audits()
+        await tester.test_alerts_system()
+        await tester.test_dedicated_ip()
+        
+        # ============= ADDITIONAL ENDPOINTS TESTING =============
+        print("\n" + "="*60)
+        print("🆕 ADDITIONAL ENDPOINTS TESTING")
+        print("="*60)
+        
+        # Test all additional endpoints
         await tester.test_all_new_endpoints()
         
         # Print summary
