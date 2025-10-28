@@ -2901,6 +2901,694 @@ async def track_referral_signup(referral_code: str, new_user_id: str):
         logger.error(f"Track signup error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ============= CUSTOM DNS ENDPOINTS =============
+
+class CustomDNSServer(BaseModel):
+    """Custom DNS server configuration"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: Optional[str] = None  # If None, it's a public DNS
+    name: str
+    primary_dns: str
+    secondary_dns: Optional[str] = None
+    description: Optional[str] = None
+    is_public: bool = True
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+@api_router.get("/dns/public")
+async def get_public_dns_servers():
+    """Get list of public DNS servers"""
+    try:
+        # Return predefined public DNS servers
+        public_dns = [
+            {
+                "id": "cloudflare",
+                "name": "Cloudflare DNS",
+                "primary_dns": "1.1.1.1",
+                "secondary_dns": "1.0.0.1",
+                "description": "Fast and privacy-focused DNS by Cloudflare",
+                "is_default": True
+            },
+            {
+                "id": "google",
+                "name": "Google DNS",
+                "primary_dns": "8.8.8.8",
+                "secondary_dns": "8.8.4.4",
+                "description": "Reliable and fast DNS by Google"
+            },
+            {
+                "id": "quad9",
+                "name": "Quad9 DNS",
+                "primary_dns": "9.9.9.9",
+                "secondary_dns": "149.112.112.112",
+                "description": "Security-focused DNS with threat blocking"
+            },
+            {
+                "id": "opendns",
+                "name": "OpenDNS",
+                "primary_dns": "208.67.222.222",
+                "secondary_dns": "208.67.220.220",
+                "description": "DNS with content filtering options"
+            }
+        ]
+        
+        # Also get user's custom DNS servers
+        cursor = db.custom_dns.find({"is_public": True, "is_active": True})
+        custom_dns = []
+        async for doc in cursor:
+            custom_dns.append({
+                "id": doc["id"],
+                "name": doc["name"],
+                "primary_dns": doc["primary_dns"],
+                "secondary_dns": doc.get("secondary_dns"),
+                "description": doc.get("description"),
+                "is_custom": True
+            })
+        
+        return {
+            "public_dns": public_dns,
+            "custom_public_dns": custom_dns
+        }
+    except Exception as e:
+        logger.error(f"Get public DNS error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/dns/custom")
+async def create_custom_dns(
+    user_id: str,
+    name: str,
+    primary_dns: str,
+    secondary_dns: Optional[str] = None,
+    description: Optional[str] = None,
+    is_public: bool = False
+):
+    """Create custom DNS server configuration"""
+    try:
+        # Validate DNS format
+        import re
+        ipv4_pattern = r'^(\d{1,3}\.){3}\d{1,3}$'
+        
+        if not re.match(ipv4_pattern, primary_dns):
+            raise HTTPException(status_code=400, detail="Invalid primary DNS format")
+        
+        if secondary_dns and not re.match(ipv4_pattern, secondary_dns):
+            raise HTTPException(status_code=400, detail="Invalid secondary DNS format")
+        
+        custom_dns = CustomDNSServer(
+            user_id=user_id if not is_public else None,
+            name=name,
+            primary_dns=primary_dns,
+            secondary_dns=secondary_dns,
+            description=description,
+            is_public=is_public
+        )
+        
+        doc = custom_dns.model_dump()
+        doc['created_at'] = doc['created_at'].isoformat()
+        
+        await db.custom_dns.insert_one(doc)
+        
+        logger.info(f"Created custom DNS: {name} for user: {user_id}")
+        
+        return {
+            "message": "Custom DNS created successfully",
+            "dns_id": custom_dns.id,
+            "name": name,
+            "primary_dns": primary_dns,
+            "secondary_dns": secondary_dns
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Create custom DNS error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/dns/user/{user_id}")
+async def get_user_custom_dns(user_id: str):
+    """Get user's custom DNS configurations"""
+    try:
+        cursor = db.custom_dns.find({
+            "user_id": user_id,
+            "is_active": True
+        })
+        
+        dns_list = []
+        async for doc in cursor:
+            dns_list.append({
+                "id": doc["id"],
+                "name": doc["name"],
+                "primary_dns": doc["primary_dns"],
+                "secondary_dns": doc.get("secondary_dns"),
+                "description": doc.get("description"),
+                "created_at": doc["created_at"]
+            })
+        
+        return {
+            "user_id": user_id,
+            "custom_dns_count": len(dns_list),
+            "dns_servers": dns_list
+        }
+    except Exception as e:
+        logger.error(f"Get user custom DNS error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============= LOYALTY PROGRAM ENDPOINTS =============
+
+class LoyaltyProgram(BaseModel):
+    """Loyalty points and rewards program"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    total_points: int = 0
+    points_earned: int = 0
+    points_redeemed: int = 0
+    tier: str = "bronze"  # bronze, silver, gold, platinum
+    tier_progress: float = 0.0  # Percentage to next tier
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class LoyaltyTransaction(BaseModel):
+    """Loyalty points transaction history"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    points: int  # Positive for earned, negative for redeemed
+    type: str  # subscription_renewal, referral_bonus, review, redemption
+    description: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+@api_router.get("/loyalty/{user_id}")
+async def get_loyalty_status(user_id: str):
+    """Get user's loyalty program status"""
+    try:
+        # Get or create loyalty account
+        loyalty = await db.loyalty_programs.find_one({"user_id": user_id})
+        
+        if not loyalty:
+            # Create new loyalty account
+            new_loyalty = LoyaltyProgram(user_id=user_id)
+            doc = new_loyalty.model_dump()
+            doc['created_at'] = doc['created_at'].isoformat()
+            doc['updated_at'] = doc['updated_at'].isoformat()
+            await db.loyalty_programs.insert_one(doc)
+            loyalty = doc
+        
+        # Get tier benefits
+        tier_benefits = {
+            "bronze": {"discount": 0, "bonus_points": 1.0, "priority_support": False},
+            "silver": {"discount": 5, "bonus_points": 1.25, "priority_support": False},
+            "gold": {"discount": 10, "bonus_points": 1.5, "priority_support": True},
+            "platinum": {"discount": 15, "bonus_points": 2.0, "priority_support": True}
+        }
+        
+        # Calculate tier thresholds
+        tier_thresholds = {
+            "bronze": 0,
+            "silver": 1000,
+            "gold": 5000,
+            "platinum": 15000
+        }
+        
+        current_tier = loyalty.get("tier", "bronze")
+        total_points = loyalty.get("total_points", 0)
+        
+        # Calculate progress to next tier
+        next_tier_map = {"bronze": "silver", "silver": "gold", "gold": "platinum", "platinum": None}
+        next_tier = next_tier_map.get(current_tier)
+        
+        tier_progress = 0.0
+        if next_tier:
+            current_threshold = tier_thresholds[current_tier]
+            next_threshold = tier_thresholds[next_tier]
+            tier_progress = ((total_points - current_threshold) / (next_threshold - current_threshold)) * 100
+            tier_progress = min(max(tier_progress, 0), 100)
+        
+        return {
+            "user_id": user_id,
+            "total_points": total_points,
+            "available_points": loyalty.get("total_points", 0),
+            "tier": current_tier,
+            "tier_progress": round(tier_progress, 1),
+            "next_tier": next_tier,
+            "benefits": tier_benefits[current_tier],
+            "points_earned": loyalty.get("points_earned", 0),
+            "points_redeemed": loyalty.get("points_redeemed", 0)
+        }
+    except Exception as e:
+        logger.error(f"Get loyalty status error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/loyalty/{user_id}/earn")
+async def earn_loyalty_points(
+    user_id: str,
+    points: int,
+    type: str,
+    description: str
+):
+    """Award loyalty points to a user"""
+    try:
+        # Get or create loyalty account
+        loyalty = await db.loyalty_programs.find_one({"user_id": user_id})
+        
+        if not loyalty:
+            new_loyalty = LoyaltyProgram(user_id=user_id)
+            doc = new_loyalty.model_dump()
+            doc['created_at'] = doc['created_at'].isoformat()
+            doc['updated_at'] = doc['updated_at'].isoformat()
+            await db.loyalty_programs.insert_one(doc)
+        
+        # Update points
+        await db.loyalty_programs.update_one(
+            {"user_id": user_id},
+            {
+                "$inc": {
+                    "total_points": points,
+                    "points_earned": points
+                },
+                "$set": {
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+        
+        # Create transaction record
+        transaction = LoyaltyTransaction(
+            user_id=user_id,
+            points=points,
+            type=type,
+            description=description
+        )
+        
+        trans_doc = transaction.model_dump()
+        trans_doc['created_at'] = trans_doc['created_at'].isoformat()
+        await db.loyalty_transactions.insert_one(trans_doc)
+        
+        # Check and update tier
+        updated_loyalty = await db.loyalty_programs.find_one({"user_id": user_id})
+        total_points = updated_loyalty.get("total_points", 0)
+        
+        new_tier = "bronze"
+        if total_points >= 15000:
+            new_tier = "platinum"
+        elif total_points >= 5000:
+            new_tier = "gold"
+        elif total_points >= 1000:
+            new_tier = "silver"
+        
+        if new_tier != updated_loyalty.get("tier"):
+            await db.loyalty_programs.update_one(
+                {"user_id": user_id},
+                {"$set": {"tier": new_tier}}
+            )
+        
+        logger.info(f"Awarded {points} loyalty points to user: {user_id}")
+        
+        return {
+            "message": f"Earned {points} loyalty points",
+            "points_earned": points,
+            "total_points": total_points + points,
+            "tier": new_tier
+        }
+    except Exception as e:
+        logger.error(f"Earn loyalty points error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/loyalty/{user_id}/transactions")
+async def get_loyalty_transactions(user_id: str, limit: int = 50):
+    """Get user's loyalty transaction history"""
+    try:
+        cursor = db.loyalty_transactions.find(
+            {"user_id": user_id}
+        ).sort("created_at", -1).limit(limit)
+        
+        transactions = []
+        async for doc in cursor:
+            transactions.append({
+                "id": doc["id"],
+                "points": doc["points"],
+                "type": doc["type"],
+                "description": doc["description"],
+                "created_at": doc["created_at"]
+            })
+        
+        return {
+            "user_id": user_id,
+            "transaction_count": len(transactions),
+            "transactions": transactions
+        }
+    except Exception as e:
+        logger.error(f"Get loyalty transactions error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============= SERVER MONITORING ENDPOINTS =============
+
+@api_router.post("/servers/{server_id}/metrics")
+async def record_server_metrics(
+    server_id: str,
+    cpu_percent: float,
+    memory_used: int,
+    network_rx: int,
+    network_tx: int,
+    active_connections: int,
+    load_average: float
+):
+    """Record server metrics (called by monitoring agents)"""
+    try:
+        metrics = ServerMetrics(
+            server_id=server_id,
+            cpu_percent=cpu_percent,
+            memory_used=memory_used,
+            network_rx=network_rx,
+            network_tx=network_tx,
+            active_connections=active_connections,
+            load_average=load_average
+        )
+        
+        doc = metrics.model_dump()
+        doc['timestamp'] = doc['timestamp'].isoformat()
+        
+        await db.server_metrics.insert_one(doc)
+        
+        # Update server's current_connections
+        await db.vpn_servers.update_one(
+            {"id": server_id},
+            {"$set": {"current_connections": active_connections}}
+        )
+        
+        return {"message": "Metrics recorded successfully"}
+    except Exception as e:
+        logger.error(f"Record server metrics error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/servers/{server_id}/metrics")
+async def get_server_metrics(
+    server_id: str,
+    period: str = "1h"  # 1h, 24h, 7d, 30d
+):
+    """Get server metrics for a time period"""
+    try:
+        now = datetime.now(timezone.utc)
+        
+        # Calculate time range
+        if period == "1h":
+            start_time = now - timedelta(hours=1)
+        elif period == "24h":
+            start_time = now - timedelta(hours=24)
+        elif period == "7d":
+            start_time = now - timedelta(days=7)
+        elif period == "30d":
+            start_time = now - timedelta(days=30)
+        else:
+            start_time = now - timedelta(hours=1)
+        
+        # Get metrics
+        cursor = db.server_metrics.find({
+            "server_id": server_id,
+            "timestamp": {"$gte": start_time.isoformat()}
+        }).sort("timestamp", 1)
+        
+        metrics = []
+        async for doc in cursor:
+            metrics.append({
+                "timestamp": doc["timestamp"],
+                "cpu_percent": doc["cpu_percent"],
+                "memory_used": doc["memory_used"],
+                "network_rx": doc["network_rx"],
+                "network_tx": doc["network_tx"],
+                "active_connections": doc["active_connections"],
+                "load_average": doc["load_average"]
+            })
+        
+        # Calculate averages
+        if metrics:
+            avg_cpu = sum(m["cpu_percent"] for m in metrics) / len(metrics)
+            avg_load = sum(m["load_average"] for m in metrics) / len(metrics)
+            max_connections = max(m["active_connections"] for m in metrics)
+        else:
+            avg_cpu = 0
+            avg_load = 0
+            max_connections = 0
+        
+        return {
+            "server_id": server_id,
+            "period": period,
+            "data_points": len(metrics),
+            "metrics": metrics,
+            "summary": {
+                "avg_cpu_percent": round(avg_cpu, 2),
+                "avg_load_average": round(avg_load, 2),
+                "max_connections": max_connections
+            }
+        }
+    except Exception as e:
+        logger.error(f"Get server metrics error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/servers/metrics/overview")
+async def get_all_servers_metrics_overview():
+    """Get current metrics overview for all servers"""
+    try:
+        # Get all active servers
+        cursor = db.vpn_servers.find({"is_active": True})
+        
+        servers_overview = []
+        async for server in cursor:
+            # Get latest metrics
+            latest_metric = await db.server_metrics.find_one(
+                {"server_id": server["id"]},
+                sort=[("timestamp", -1)]
+            )
+            
+            if latest_metric:
+                servers_overview.append({
+                    "server_id": server["id"],
+                    "location": server["location"],
+                    "cpu_percent": latest_metric["cpu_percent"],
+                    "load_average": latest_metric["load_average"],
+                    "active_connections": latest_metric["active_connections"],
+                    "max_capacity": server.get("max_capacity", 1000),
+                    "utilization": round((latest_metric["active_connections"] / server.get("max_capacity", 1000)) * 100, 1),
+                    "status": "healthy" if latest_metric["cpu_percent"] < 80 and latest_metric["load_average"] < 5 else "warning",
+                    "last_update": latest_metric["timestamp"]
+                })
+        
+        # Calculate overall stats
+        total_connections = sum(s["active_connections"] for s in servers_overview)
+        total_capacity = sum(s["max_capacity"] for s in servers_overview)
+        avg_utilization = (total_connections / total_capacity * 100) if total_capacity > 0 else 0
+        
+        return {
+            "total_servers": len(servers_overview),
+            "total_active_connections": total_connections,
+            "total_capacity": total_capacity,
+            "average_utilization": round(avg_utilization, 1),
+            "servers": servers_overview
+        }
+    except Exception as e:
+        logger.error(f"Get servers metrics overview error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============= SHADOWSOCKS CONFIG ENDPOINT =============
+
+@api_router.get("/connections/{connection_id}/shadowsocks-config")
+async def get_shadowsocks_config(connection_id: str):
+    """Download Shadowsocks configuration for a connection"""
+    try:
+        # Get connection
+        connection = await db.connections.find_one({"id": connection_id})
+        if not connection:
+            raise HTTPException(status_code=404, detail="Connection not found")
+        
+        if not connection.get("is_active"):
+            raise HTTPException(status_code=400, detail="Connection is not active")
+        
+        # Get server
+        server = await db.vpn_servers.find_one({"id": connection["server_id"]})
+        if not server:
+            raise HTTPException(status_code=404, detail="Server not found")
+        
+        # Check if server supports Shadowsocks
+        if "Shadowsocks" not in server.get("protocols", []):
+            raise HTTPException(status_code=400, detail="Server does not support Shadowsocks protocol")
+        
+        # Generate Shadowsocks config
+        config = vpn_config_generator.generate_shadowsocks_config(
+            server_ip=server["ipv4_address"],
+            server_location=server["location"],
+            user_id=connection["user_id"]
+        )
+        
+        # Return as downloadable file
+        filename = f"shadowsocks-{server['location'].replace(' ', '-').lower()}.txt"
+        
+        return StreamingResponse(
+            io.BytesIO(config.encode()),
+            media_type="text/plain",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get Shadowsocks config error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============= DEVICE MANAGEMENT ENDPOINTS =============
+
+@api_router.get("/users/{user_id}/devices")
+async def get_user_devices(user_id: str):
+    """Get all devices registered for a user"""
+    try:
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        devices = user.get("devices", [])
+        
+        # Get active connections for each device
+        for device in devices:
+            active_connection = await db.connections.find_one({
+                "user_id": user_id,
+                "device_name": device["name"],
+                "is_active": True
+            })
+            
+            device["is_connected"] = bool(active_connection)
+            if active_connection:
+                server = await db.vpn_servers.find_one({"id": active_connection["server_id"]})
+                device["connected_server"] = server.get("location") if server else "Unknown"
+        
+        # Get plan device limit
+        device_limit = 5  # default
+        if user.get("current_plan_id"):
+            plan = await db.tariff_plans.find_one({"id": user["current_plan_id"]})
+            if plan:
+                device_limit = plan.get("device_limit", 5)
+        
+        return {
+            "user_id": user_id,
+            "device_count": len(devices),
+            "device_limit": device_limit,
+            "devices": devices
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get user devices error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/users/{user_id}/devices")
+async def register_device(
+    user_id: str,
+    device_name: str,
+    device_type: str,  # windows, macos, linux, ios, android
+    device_id: str
+):
+    """Register a new device for a user"""
+    try:
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        devices = user.get("devices", [])
+        
+        # Check device limit
+        device_limit = 5
+        if user.get("current_plan_id"):
+            plan = await db.tariff_plans.find_one({"id": user["current_plan_id"]})
+            if plan:
+                device_limit = plan.get("device_limit", 5)
+        
+        if len(devices) >= device_limit:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Device limit reached ({device_limit} devices). Please upgrade your plan or remove a device."
+            )
+        
+        # Check if device already registered
+        if any(d.get("device_id") == device_id for d in devices):
+            raise HTTPException(status_code=400, detail="Device already registered")
+        
+        # Add device
+        new_device = {
+            "device_id": device_id,
+            "name": device_name,
+            "type": device_type,
+            "registered_at": datetime.now(timezone.utc).isoformat(),
+            "last_connected": None
+        }
+        
+        devices.append(new_device)
+        
+        await db.users.update_one(
+            {"id": user_id},
+            {"$set": {"devices": devices}}
+        )
+        
+        logger.info(f"Registered device {device_name} for user: {user_id}")
+        
+        return {
+            "message": "Device registered successfully",
+            "device": new_device,
+            "device_count": len(devices),
+            "device_limit": device_limit
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Register device error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.delete("/users/{user_id}/devices/{device_id}")
+async def remove_device(user_id: str, device_id: str):
+    """Remove a device from user's account"""
+    try:
+        user = await db.users.find_one({"id": user_id})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        devices = user.get("devices", [])
+        
+        # Find and remove device
+        device_found = False
+        updated_devices = []
+        for device in devices:
+            if device.get("device_id") == device_id:
+                device_found = True
+                # Disconnect any active connections for this device
+                await db.connections.update_many(
+                    {
+                        "user_id": user_id,
+                        "device_name": device.get("name"),
+                        "is_active": True
+                    },
+                    {"$set": {"is_active": False, "disconnected_at": datetime.now(timezone.utc).isoformat()}}
+                )
+            else:
+                updated_devices.append(device)
+        
+        if not device_found:
+            raise HTTPException(status_code=404, detail="Device not found")
+        
+        await db.users.update_one(
+            {"id": user_id},
+            {"$set": {"devices": updated_devices}}
+        )
+        
+        logger.info(f"Removed device {device_id} for user: {user_id}")
+        
+        return {
+            "message": "Device removed successfully",
+            "device_count": len(updated_devices)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Remove device error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ============= DEDICATED IP ENDPOINTS =============
 
 @api_router.post("/dedicated-ip/assign")
