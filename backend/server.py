@@ -2666,15 +2666,21 @@ async def get_revenue_analytics(period: str = Query("month", regex="^(day|week|m
     try:
         now = datetime.now(timezone.utc)
         
+        # Calculate start date based on period
         if period == "day":
-            start_date = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            start_date = now - timedelta(days=1)
+            date_format = "%Y-%m-%d %H:00"
         elif period == "week":
             start_date = now - timedelta(days=7)
+            date_format = "%Y-%m-%d"
         elif period == "month":
-            start_date = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            start_date = now - timedelta(days=30)
+            date_format = "%Y-%m-%d"
         else:  # year
-            start_date = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+            start_date = now - timedelta(days=365)
+            date_format = "%Y-%m"
         
+        # Aggregate revenue by date
         pipeline = [
             {
                 "$match": {
@@ -2686,8 +2692,8 @@ async def get_revenue_analytics(period: str = Query("month", regex="^(day|week|m
                 "$group": {
                     "_id": {
                         "$dateToString": {
-                            "format": "%Y-%m-%d",
-                            "date": {"$dateFromString": {"dateString": "$created_at"}}
+                            "format": date_format,
+                            "date": {"$toDate": "$created_at"}
                         }
                     },
                     "revenue": {"$sum": "$amount"},
@@ -2711,6 +2717,225 @@ async def get_revenue_analytics(period: str = Query("month", regex="^(day|week|m
         }
     except Exception as e:
         logger.error(f"Revenue analytics error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/analytics/conversion")
+async def get_conversion_analytics():
+    """Get conversion funnel analytics"""
+    try:
+        # Total users
+        total_users = await db.users.count_documents({})
+        
+        # Users with active subscriptions
+        active_subscribers = await db.users.count_documents({
+            "current_plan_id": {"$ne": None},
+            "plan_expires_at": {"$gte": datetime.now(timezone.utc).isoformat()}
+        })
+        
+        # Total payments
+        total_payments = await db.payments.count_documents({})
+        successful_payments = await db.payments.count_documents({
+            "status": {"$in": ["confirmed", "finished"]}
+        })
+        
+        # Calculate conversion rates
+        subscription_conversion = (active_subscribers / total_users * 100) if total_users > 0 else 0
+        payment_success_rate = (successful_payments / total_payments * 100) if total_payments > 0 else 0
+        
+        # Get referral conversions
+        referral_signups = await db.referral_programs.aggregate([
+            {"$group": {"_id": None, "total_signups": {"$sum": "$signups"}, "total_conversions": {"$sum": "$conversions"}}}
+        ]).to_list(1)
+        
+        referral_conversion = 0
+        if referral_signups and referral_signups[0]["total_signups"] > 0:
+            referral_conversion = (referral_signups[0]["total_conversions"] / referral_signups[0]["total_signups"] * 100)
+        
+        return {
+            "funnel": {
+                "total_users": total_users,
+                "active_subscribers": active_subscribers,
+                "subscription_conversion_rate": round(subscription_conversion, 2)
+            },
+            "payments": {
+                "total_attempts": total_payments,
+                "successful_payments": successful_payments,
+                "success_rate": round(payment_success_rate, 2)
+            },
+            "referrals": {
+                "total_signups": referral_signups[0]["total_signups"] if referral_signups else 0,
+                "total_conversions": referral_signups[0]["total_conversions"] if referral_signups else 0,
+                "conversion_rate": round(referral_conversion, 2)
+            }
+        }
+    except Exception as e:
+        logger.error(f"Conversion analytics error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/analytics/churn")
+async def get_churn_analytics(period_days: int = 30):
+    """Get churn rate analytics"""
+    try:
+        now = datetime.now(timezone.utc)
+        period_start = now - timedelta(days=period_days)
+        
+        # Users at start of period with active subscriptions
+        users_at_start = await db.users.count_documents({
+            "created_at": {"$lt": period_start.isoformat()},
+            "current_plan_id": {"$ne": None}
+        })
+        
+        # Users who churned (subscription expired and not renewed)
+        churned_users = await db.users.count_documents({
+            "plan_expires_at": {
+                "$gte": period_start.isoformat(),
+                "$lt": now.isoformat()
+            },
+            "current_plan_id": None
+        })
+        
+        # Calculate churn rate
+        churn_rate = (churned_users / users_at_start * 100) if users_at_start > 0 else 0
+        
+        # Revenue lost from churn
+        # Get average subscription value
+        avg_payment = await db.payments.aggregate([
+            {
+                "$match": {
+                    "status": {"$in": ["confirmed", "finished"]}
+                }
+            },
+            {
+                "$group": {
+                    "_id": None,
+                    "avg_amount": {"$avg": "$amount"}
+                }
+            }
+        ]).to_list(1)
+        
+        avg_subscription_value = avg_payment[0]["avg_amount"] if avg_payment else 0
+        revenue_lost = churned_users * avg_subscription_value
+        
+        # Get churn reasons (if tracked)
+        # This would require additional data collection
+        
+        return {
+            "period_days": period_days,
+            "users_at_period_start": users_at_start,
+            "churned_users": churned_users,
+            "churn_rate": round(churn_rate, 2),
+            "estimated_revenue_lost": round(revenue_lost, 2),
+            "avg_subscription_value": round(avg_subscription_value, 2)
+        }
+    except Exception as e:
+        logger.error(f"Churn analytics error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/analytics/geographic-distribution")
+async def get_geographic_distribution_analytics():
+    """Get geographic distribution of users based on connection history"""
+    try:
+        # Aggregate connections by country
+        pipeline = [
+            {
+                "$match": {
+                    "country": {"$ne": None}
+                }
+            },
+            {
+                "$group": {
+                    "_id": "$country",
+                    "total_sessions": {"$sum": 1},
+                    "unique_users": {"$addToSet": "$user_id"}
+                }
+            },
+            {
+                "$project": {
+                    "country": "$_id",
+                    "total_sessions": 1,
+                    "unique_users": {"$size": "$unique_users"}
+                }
+            },
+            {"$sort": {"unique_users": -1}}
+        ]
+        
+        cursor = db.connection_history.aggregate(pipeline)
+        countries = []
+        async for doc in cursor:
+            countries.append({
+                "country": doc["_id"],
+                "unique_users": doc["unique_users"],
+                "total_sessions": doc["total_sessions"]
+            })
+        
+        # Get server distribution
+        server_cursor = db.vpn_servers.find({"is_active": True})
+        server_distribution = {}
+        async for server in server_cursor:
+            country = server.get("country_code", "Unknown")
+            server_distribution[country] = server_distribution.get(country, 0) + 1
+        
+        return {
+            "user_distribution": countries,
+            "server_distribution": [{"country": k, "server_count": v} for k, v in server_distribution.items()],
+            "total_countries": len(countries)
+        }
+    except Exception as e:
+        logger.error(f"Geographic distribution analytics error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/analytics/plan-popularity")
+async def get_plan_popularity_analytics():
+    """Get plan popularity and revenue by plan"""
+    try:
+        # Get all plans
+        plans_cursor = db.tariff_plans.find({})
+        plans = {}
+        async for plan in plans_cursor:
+            plans[plan["id"]] = {
+                "name": plan["name"],
+                "price_monthly": plan["price_monthly"],
+                "price_annual": plan["price_annual"],
+                "subscribers": 0,
+                "revenue": 0
+            }
+        
+        # Count subscribers per plan
+        users_cursor = db.users.find({"current_plan_id": {"$ne": None}})
+        async for user in users_cursor:
+            plan_id = user.get("current_plan_id")
+            if plan_id in plans:
+                plans[plan_id]["subscribers"] += 1
+        
+        # Calculate revenue per plan
+        payments_cursor = db.payments.find({
+            "status": {"$in": ["confirmed", "finished"]}
+        })
+        async for payment in payments_cursor:
+            plan_id = payment.get("plan_id")
+            if plan_id in plans:
+                plans[plan_id]["revenue"] += payment.get("amount", 0)
+        
+        # Convert to list and sort by subscribers
+        plan_list = [
+            {
+                "plan_id": k,
+                "plan_name": v["name"],
+                "subscribers": v["subscribers"],
+                "revenue": round(v["revenue"], 2),
+                "avg_revenue_per_user": round(v["revenue"] / v["subscribers"], 2) if v["subscribers"] > 0 else 0
+            }
+            for k, v in plans.items()
+        ]
+        plan_list.sort(key=lambda x: x["subscribers"], reverse=True)
+        
+        return {
+            "plans": plan_list,
+            "total_subscribers": sum(p["subscribers"] for p in plan_list),
+            "total_revenue": round(sum(p["revenue"] for p in plan_list), 2)
+        }
+    except Exception as e:
+        logger.error(f"Plan popularity analytics error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ============= CONNECTION HISTORY ENDPOINTS =============
