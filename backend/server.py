@@ -81,7 +81,7 @@ class VPNServer(BaseModel):
     max_capacity: int = 1000
     current_connections: int = 0
     is_active: bool = True
-    protocols: List[str] = ["WireGuard", "OpenVPN", "IKEv2"]
+    protocols: List[str] = ["WireGuard", "OpenVPN", "IKEv2", "Shadowsocks"]
     # Advanced features support
     supports_obfuscation: bool = True
     supports_tor: bool = False  # Only specific servers have Tor proxy
