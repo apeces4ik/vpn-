@@ -261,6 +261,17 @@ const PaymentPage = ({ user, setUser, logout }) => {
             <Shield size={28} />
             <span className="logo-text">AnonVPN</span>
           </div>
+          <button 
+            className="btn btn-secondary"
+            onClick={() => {
+              logout();
+              navigate('/');
+            }}
+            data-testid="logout-btn"
+            style={{ marginLeft: 'auto' }}
+          >
+            Disconnect
+          </button>
         </div>
       </nav>
 
