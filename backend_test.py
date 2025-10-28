@@ -1239,8 +1239,459 @@ class AnonVPNTester:
         else:
             self.log_test("Geography Analytics", False, "Failed to get geography data", data)
     
-    # ============= NEW ENDPOINTS TESTING (Review Request) =============
+    # ============= ENTERPRISE ENDPOINTS TESTING (Review Request) =============
     
+    async def test_connection_history_and_sessions(self):
+        """Test Connection History & Session Tracking endpoints"""
+        print("\n📊 Testing Connection History & Session Tracking...")
+        
+        if not self.test_data.get('user_id'):
+            self.log_test("Connection History & Sessions", False, "No user_id available")
+            return
+        
+        user_id = self.test_data['user_id']
+        
+        # Test 1: GET /api/users/{user_id}/connection-history
+        success, data = await self.make_request('GET', f'/users/{user_id}/connection-history')
+        if success and 'connections' in data:
+            connections = data['connections']
+            total_connections = data.get('total_connections', 0)
+            self.log_test("Get Connection History", True, 
+                f"Found {total_connections} connection history records")
+        else:
+            self.log_test("Get Connection History", False, "Failed to get connection history", data)
+        
+        # Test 2: GET /api/users/{user_id}/active-sessions
+        success, data = await self.make_request('GET', f'/users/{user_id}/active-sessions')
+        if success and 'sessions' in data:
+            sessions = data['sessions']
+            active_count = data.get('active_sessions_count', 0)
+            self.log_test("Get Active Sessions", True, 
+                f"Found {active_count} active sessions")
+            
+            # Store session ID for disconnect test
+            if sessions and len(sessions) > 0:
+                self.test_data['session_id'] = sessions[0].get('id')
+        else:
+            self.log_test("Get Active Sessions", False, "Failed to get active sessions", data)
+        
+        # Test 3: DELETE /api/users/{user_id}/sessions/{session_id}/disconnect
+        if self.test_data.get('session_id'):
+            session_id = self.test_data['session_id']
+            success, data = await self.make_request('DELETE', f'/users/{user_id}/sessions/{session_id}/disconnect')
+            if success:
+                self.log_test("Disconnect Session", True, "Session disconnected successfully")
+            else:
+                self.log_test("Disconnect Session", False, "Failed to disconnect session", data)
+        else:
+            # Create a mock session for testing
+            mock_session_id = "test-session-12345"
+            success, data = await self.make_request('DELETE', f'/users/{user_id}/sessions/{mock_session_id}/disconnect')
+            if not success and "not found" in str(data).lower():
+                self.log_test("Disconnect Session", True, "Session validation working (session not found)")
+            else:
+                self.log_test("Disconnect Session", False, f"Unexpected response: {data}")
+    
+    async def test_referral_program_and_affiliate(self):
+        """Test Referral Program & Affiliate System endpoints"""
+        print("\n🤝 Testing Referral Program & Affiliate System...")
+        
+        if not self.test_data.get('user_id'):
+            self.log_test("Referral & Affiliate System", False, "No user_id available")
+            return
+        
+        user_id = self.test_data['user_id']
+        
+        # Test 1: POST /api/referrals/create
+        referral_data = {"user_id": user_id}
+        success, data = await self.make_request('POST', '/referrals/create', params=referral_data)
+        if success and data.get('referral_code'):
+            referral_code = data['referral_code']
+            self.test_data['referral_code'] = referral_code
+            self.log_test("Create Referral", True, f"Created referral code: {referral_code}")
+        else:
+            self.log_test("Create Referral", False, "Failed to create referral", data)
+        
+        # Test 2: GET /api/referrals/{user_id}/stats
+        success, data = await self.make_request('GET', f'/referrals/{user_id}/stats')
+        if success and 'total_referrals' in data:
+            total_referrals = data.get('total_referrals', 0)
+            total_earnings = data.get('total_earnings', 0)
+            self.log_test("Get Referral Stats", True, 
+                f"Referrals: {total_referrals}, Earnings: ${total_earnings}")
+        else:
+            self.log_test("Get Referral Stats", False, "Failed to get referral stats", data)
+        
+        # Test 3: POST /api/referrals/track-click
+        if self.test_data.get('referral_code'):
+            click_data = {"referral_code": self.test_data['referral_code']}
+            success, data = await self.make_request('POST', '/referrals/track-click', params=click_data)
+            if success:
+                self.log_test("Track Referral Click", True, "Referral click tracked successfully")
+            else:
+                self.log_test("Track Referral Click", False, "Failed to track referral click", data)
+        else:
+            self.log_test("Track Referral Click", False, "No referral code available")
+        
+        # Test 4: POST /api/affiliate/register
+        affiliate_data = {
+            "user_id": user_id,
+            "payment_method": "crypto",
+            "payment_details": {"wallet": "test_wallet_address"}
+        }
+        success, data = await self.make_request('POST', '/affiliate/register', json=affiliate_data)
+        if success and data.get('affiliate_id'):
+            affiliate_id = data['affiliate_id']
+            self.test_data['affiliate_id'] = affiliate_id
+            self.log_test("Register Affiliate", True, f"Registered affiliate: {affiliate_id}")
+        else:
+            self.log_test("Register Affiliate", False, "Failed to register affiliate", data)
+        
+        # Test 5: GET /api/affiliate/dashboard/{user_id}
+        success, data = await self.make_request('GET', f'/affiliate/dashboard/{user_id}')
+        if success and 'total_earnings' in data:
+            total_earnings = data.get('total_earnings', 0)
+            pending_earnings = data.get('pending_earnings', 0)
+            self.log_test("Get Affiliate Dashboard", True, 
+                f"Total: ${total_earnings}, Pending: ${pending_earnings}")
+        else:
+            self.log_test("Get Affiliate Dashboard", False, "Failed to get affiliate dashboard", data)
+    
+    async def test_oauth2_and_saml(self):
+        """Test OAuth2 & SAML authentication endpoints"""
+        print("\n🔐 Testing OAuth2 & SAML Authentication...")
+        
+        # Create test organization first
+        org_data = {
+            "name": "Test Organization",
+            "owner_email": "owner@testorg.example",
+            "plan_id": self.test_data.get('tariff_id', 'test-plan')
+        }
+        success, org_response = await self.make_request('POST', '/organizations', json=org_data)
+        if success and org_response.get('organization_id'):
+            organization_id = org_response['organization_id']
+            self.test_data['organization_id'] = organization_id
+        else:
+            # Use a test organization ID
+            organization_id = "test-org-12345"
+            self.test_data['organization_id'] = organization_id
+        
+        # Test 1: POST /api/auth/oauth/providers
+        oauth_data = {
+            "organization_id": organization_id,
+            "provider_name": "google",
+            "client_id": "test_client_id",
+            "client_secret": "test_client_secret",
+            "authorization_url": "https://accounts.google.com/o/oauth2/auth",
+            "token_url": "https://oauth2.googleapis.com/token",
+            "userinfo_url": "https://www.googleapis.com/oauth2/v1/userinfo"
+        }
+        success, data = await self.make_request('POST', '/auth/oauth/providers', json=oauth_data)
+        if success and data.get('provider_id'):
+            provider_id = data['provider_id']
+            self.test_data['oauth_provider_id'] = provider_id
+            self.log_test("Create OAuth Provider", True, f"Created OAuth provider: {provider_id}")
+        else:
+            self.log_test("Create OAuth Provider", False, "Failed to create OAuth provider", data)
+        
+        # Test 2: GET /api/auth/oauth/providers/{organization_id}
+        success, data = await self.make_request('GET', f'/auth/oauth/providers/{organization_id}')
+        if success and 'providers' in data:
+            providers = data['providers']
+            self.log_test("Get OAuth Providers", True, f"Found {len(providers)} OAuth providers")
+        else:
+            self.log_test("Get OAuth Providers", False, "Failed to get OAuth providers", data)
+        
+        # Test 3: POST /api/auth/saml/configure
+        saml_data = {
+            "organization_id": organization_id,
+            "provider_name": "okta",
+            "idp_entity_id": "test_entity_id",
+            "sso_url": "https://test.okta.com/sso",
+            "x509_cert": "test_certificate_data"
+        }
+        success, data = await self.make_request('POST', '/auth/saml/configure', json=saml_data)
+        if success and data.get('saml_provider_id'):
+            saml_provider_id = data['saml_provider_id']
+            self.log_test("Configure SAML Provider", True, f"Configured SAML provider: {saml_provider_id}")
+        else:
+            self.log_test("Configure SAML Provider", False, "Failed to configure SAML provider", data)
+    
+    async def test_gdpr_compliance(self):
+        """Test GDPR Compliance endpoints"""
+        print("\n🛡️ Testing GDPR Compliance...")
+        
+        if not self.test_data.get('user_id'):
+            self.log_test("GDPR Compliance", False, "No user_id available")
+            return
+        
+        user_id = self.test_data['user_id']
+        
+        # Test 1: POST /api/gdpr/data-export
+        export_data = {"user_id": user_id}
+        success, data = await self.make_request('POST', '/gdpr/data-export', params=export_data)
+        if success and data.get('request_id'):
+            request_id = data['request_id']
+            self.test_data['gdpr_export_request_id'] = request_id
+            self.log_test("GDPR Data Export Request", True, f"Created export request: {request_id}")
+        else:
+            self.log_test("GDPR Data Export Request", False, "Failed to create export request", data)
+        
+        # Test 2: POST /api/gdpr/data-deletion?confirm=true
+        deletion_data = {"user_id": user_id}
+        success, data = await self.make_request('POST', '/gdpr/data-deletion?confirm=true', params=deletion_data)
+        if success and data.get('request_id'):
+            deletion_request_id = data['request_id']
+            self.log_test("GDPR Data Deletion Request", True, f"Created deletion request: {deletion_request_id}")
+        else:
+            self.log_test("GDPR Data Deletion Request", False, "Failed to create deletion request", data)
+        
+        # Test 3: GET /api/gdpr/requests/{user_id}
+        success, data = await self.make_request('GET', f'/gdpr/requests/{user_id}')
+        if success and 'requests' in data:
+            requests = data['requests']
+            total_requests = data.get('total_requests', 0)
+            self.log_test("Get GDPR Requests", True, f"Found {total_requests} GDPR requests")
+        else:
+            self.log_test("Get GDPR Requests", False, "Failed to get GDPR requests", data)
+    
+    async def test_no_log_audit(self):
+        """Test No-Log Audit endpoints"""
+        print("\n📋 Testing No-Log Audit...")
+        
+        # Test 1: POST /api/audit/log
+        audit_data = {
+            "action": "policy_verified",
+            "result": "success",
+            "details": "No-log policy verified",
+            "auditor": "system"
+        }
+        success, data = await self.make_request('POST', '/audit/log', json=audit_data)
+        if success and data.get('audit_id'):
+            audit_id = data['audit_id']
+            self.log_test("Create Audit Log", True, f"Created audit log: {audit_id}")
+        else:
+            self.log_test("Create Audit Log", False, "Failed to create audit log", data)
+        
+        # Test 2: GET /api/audit/no-log-report
+        success, data = await self.make_request('GET', '/audit/no-log-report')
+        if success and 'report' in data:
+            report = data['report']
+            policy_status = report.get('no_log_policy_status', 'unknown')
+            self.log_test("Get No-Log Report", True, f"Policy status: {policy_status}")
+        else:
+            self.log_test("Get No-Log Report", False, "Failed to get no-log report", data)
+    
+    async def test_security_incidents(self):
+        """Test Security Incidents endpoints"""
+        print("\n🚨 Testing Security Incidents...")
+        
+        # Test 1: POST /api/security/incidents
+        incident_data = {
+            "title": "Test Incident",
+            "description": "Test security incident for API testing",
+            "severity": "low"
+        }
+        success, data = await self.make_request('POST', '/security/incidents', json=incident_data)
+        if success and data.get('incident_id'):
+            incident_id = data['incident_id']
+            self.test_data['incident_id'] = incident_id
+            self.log_test("Create Security Incident", True, f"Created incident: {incident_id}")
+        else:
+            self.log_test("Create Security Incident", False, "Failed to create incident", data)
+        
+        # Test 2: GET /api/security/incidents
+        success, data = await self.make_request('GET', '/security/incidents')
+        if success and 'incidents' in data:
+            incidents = data['incidents']
+            total_incidents = data.get('total_incidents', 0)
+            self.log_test("Get Security Incidents", True, f"Found {total_incidents} incidents")
+        else:
+            self.log_test("Get Security Incidents", False, "Failed to get incidents", data)
+        
+        # Test 3: PUT /api/security/incidents/{incident_id}/resolve
+        if self.test_data.get('incident_id'):
+            resolve_data = {
+                "actions_taken": ["investigated", "resolved"],
+                "resolved_by": "admin"
+            }
+            incident_id = self.test_data['incident_id']
+            success, data = await self.make_request('PUT', f'/security/incidents/{incident_id}/resolve', json=resolve_data)
+            if success:
+                self.log_test("Resolve Security Incident", True, "Incident resolved successfully")
+            else:
+                self.log_test("Resolve Security Incident", False, "Failed to resolve incident", data)
+        else:
+            self.log_test("Resolve Security Incident", False, "No incident_id available")
+    
+    async def test_sla_and_support(self):
+        """Test SLA & Support endpoints"""
+        print("\n🎫 Testing SLA & Support...")
+        
+        if not self.test_data.get('user_id'):
+            self.log_test("SLA & Support", False, "No user_id available")
+            return
+        
+        user_id = self.test_data['user_id']
+        
+        # Test 1: POST /api/support/tickets
+        ticket_data = {
+            "user_id": user_id,
+            "subject": "Test Support Ticket",
+            "description": "This is a test ticket for API testing",
+            "category": "technical"
+        }
+        success, data = await self.make_request('POST', '/support/tickets', json=ticket_data)
+        if success and data.get('ticket_id'):
+            ticket_id = data['ticket_id']
+            self.test_data['ticket_id'] = ticket_id
+            self.log_test("Create Support Ticket", True, f"Created ticket: {ticket_id}")
+        else:
+            self.log_test("Create Support Ticket", False, "Failed to create ticket", data)
+        
+        # Test 2: GET /api/support/tickets/{user_id}
+        success, data = await self.make_request('GET', f'/support/tickets/{user_id}')
+        if success and 'tickets' in data:
+            tickets = data['tickets']
+            total_tickets = data.get('total_tickets', 0)
+            self.log_test("Get Support Tickets", True, f"Found {total_tickets} tickets for user")
+        else:
+            self.log_test("Get Support Tickets", False, "Failed to get support tickets", data)
+        
+        # Test 3: GET /api/sla/metrics?days=30
+        success, data = await self.make_request('GET', '/sla/metrics?days=30')
+        if success and 'sla_metrics' in data:
+            metrics = data['sla_metrics']
+            uptime = metrics.get('uptime_percentage', 0)
+            self.log_test("Get SLA Metrics", True, f"Uptime: {uptime}%")
+        else:
+            self.log_test("Get SLA Metrics", False, "Failed to get SLA metrics", data)
+    
+    async def test_dmca_and_legal(self):
+        """Test DMCA & Legal endpoints"""
+        print("\n⚖️ Testing DMCA & Legal...")
+        
+        # Test 1: POST /api/legal/dmca-notice
+        dmca_data = {
+            "complainant_name": "Test Complainant",
+            "complainant_email": "complainant@example.com",
+            "content_description": "Test content for DMCA notice"
+        }
+        success, data = await self.make_request('POST', '/legal/dmca-notice', json=dmca_data)
+        if success and data.get('notice_id'):
+            notice_id = data['notice_id']
+            self.log_test("Create DMCA Notice", True, f"Created DMCA notice: {notice_id}")
+        else:
+            self.log_test("Create DMCA Notice", False, "Failed to create DMCA notice", data)
+        
+        # Test 2: GET /api/legal/dmca-notices
+        success, data = await self.make_request('GET', '/legal/dmca-notices')
+        if success and 'notices' in data:
+            notices = data['notices']
+            total_notices = data.get('total_notices', 0)
+            self.log_test("Get DMCA Notices", True, f"Found {total_notices} DMCA notices")
+        else:
+            self.log_test("Get DMCA Notices", False, "Failed to get DMCA notices", data)
+    
+    async def test_security_audits(self):
+        """Test Security Audits endpoints"""
+        print("\n🔍 Testing Security Audits...")
+        
+        # Test 1: POST /api/security/audits/schedule
+        audit_data = {
+            "audit_type": "penetration_test",
+            "scheduled_date": "2025-08-01T10:00:00Z",
+            "auditor": "SecurityCorp"
+        }
+        success, data = await self.make_request('POST', '/security/audits/schedule', json=audit_data)
+        if success and data.get('audit_id'):
+            audit_id = data['audit_id']
+            self.log_test("Schedule Security Audit", True, f"Scheduled audit: {audit_id}")
+        else:
+            self.log_test("Schedule Security Audit", False, "Failed to schedule audit", data)
+        
+        # Test 2: GET /api/security/audits
+        success, data = await self.make_request('GET', '/security/audits')
+        if success and 'audits' in data:
+            audits = data['audits']
+            total_audits = data.get('total_audits', 0)
+            self.log_test("Get Security Audits", True, f"Found {total_audits} security audits")
+        else:
+            self.log_test("Get Security Audits", False, "Failed to get security audits", data)
+    
+    async def test_alerts_system(self):
+        """Test Alerts System endpoints"""
+        print("\n🔔 Testing Alerts System...")
+        
+        # Test 1: POST /api/alerts/create
+        alert_data = {
+            "alert_type": "server_down",
+            "severity": "critical",
+            "title": "Server Down Alert",
+            "message": "Test alert for API testing",
+            "source": "server_1"
+        }
+        success, data = await self.make_request('POST', '/alerts/create', json=alert_data)
+        if success and data.get('alert_id'):
+            alert_id = data['alert_id']
+            self.test_data['alert_id'] = alert_id
+            self.log_test("Create Alert", True, f"Created alert: {alert_id}")
+        else:
+            self.log_test("Create Alert", False, "Failed to create alert", data)
+        
+        # Test 2: GET /api/alerts/active
+        success, data = await self.make_request('GET', '/alerts/active')
+        if success and 'alerts' in data:
+            alerts = data['alerts']
+            active_count = data.get('active_alerts_count', 0)
+            self.log_test("Get Active Alerts", True, f"Found {active_count} active alerts")
+        else:
+            self.log_test("Get Active Alerts", False, "Failed to get active alerts", data)
+        
+        # Test 3: PUT /api/alerts/{alert_id}/acknowledge
+        if self.test_data.get('alert_id'):
+            ack_data = {"acknowledged_by": "admin"}
+            alert_id = self.test_data['alert_id']
+            success, data = await self.make_request('PUT', f'/alerts/{alert_id}/acknowledge', json=ack_data)
+            if success:
+                self.log_test("Acknowledge Alert", True, "Alert acknowledged successfully")
+            else:
+                self.log_test("Acknowledge Alert", False, "Failed to acknowledge alert", data)
+        else:
+            self.log_test("Acknowledge Alert", False, "No alert_id available")
+    
+    async def test_dedicated_ip(self):
+        """Test Dedicated IP endpoints"""
+        print("\n🌐 Testing Dedicated IP...")
+        
+        if not all([self.test_data.get('user_id'), self.test_data.get('server_id')]):
+            self.log_test("Dedicated IP", False, "Missing user_id or server_id")
+            return
+        
+        user_id = self.test_data['user_id']
+        server_id = self.test_data['server_id']
+        
+        # Test 1: POST /api/dedicated-ip/assign
+        assign_data = {
+            "user_id": user_id,
+            "server_id": server_id
+        }
+        success, data = await self.make_request('POST', '/dedicated-ip/assign', json=assign_data)
+        if success and data.get('dedicated_ip'):
+            dedicated_ip = data['dedicated_ip']
+            self.log_test("Assign Dedicated IP", True, f"Assigned IP: {dedicated_ip}")
+        else:
+            self.log_test("Assign Dedicated IP", False, "Failed to assign dedicated IP", data)
+        
+        # Test 2: GET /api/dedicated-ip/{user_id}
+        success, data = await self.make_request('GET', f'/dedicated-ip/{user_id}')
+        if success and 'dedicated_ips' in data:
+            dedicated_ips = data['dedicated_ips']
+            ip_count = data.get('total_dedicated_ips', 0)
+            self.log_test("Get Dedicated IPs", True, f"Found {ip_count} dedicated IPs for user")
+        else:
+            self.log_test("Get Dedicated IPs", False, "Failed to get dedicated IPs", data)
+
     async def test_custom_dns_endpoints(self):
         """Test Custom DNS endpoints"""
         print("\n🌐 Testing Custom DNS Endpoints...")
