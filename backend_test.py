@@ -12,7 +12,7 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 
 # Backend URL from environment
-BACKEND_URL = "https://vpn-analysis.preview.emergentagent.com/api"
+BACKEND_URL = "https://netpanel-admin.preview.emergentagent.com/api"
 
 class AnonVPNTester:
     def __init__(self):
