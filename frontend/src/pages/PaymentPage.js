@@ -13,7 +13,7 @@ import './PaymentPage.css';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const PaymentPage = ({ user, setUser }) => {
+const PaymentPage = ({ user, setUser, logout }) => {
   const navigate = useNavigate();
   const [tariffs, setTariffs] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
