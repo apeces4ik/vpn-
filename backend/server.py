@@ -1197,7 +1197,7 @@ async def payment_webhook(request: dict, background_tasks: BackgroundTasks):
 @api_router.post("/connections/connect")
 async def connect_to_server(user_id: str, server_id: str, device_name: str):
     # Check if user has active plan
-    user = await db.users.find_one({"id": request.user_id})
+    user = await db.users.find_one({"id": user_id})
     if not user or not user.get('current_plan_id'):
         raise HTTPException(status_code=403, detail="No active subscription")
     
@@ -3282,7 +3282,7 @@ async def create_referral_code(user_id: str):
     """Create a referral code for a user"""
     try:
         # Check if user exists
-        user = await db.users.find_one({"id": request.user_id})
+        user = await db.users.find_one({"id": user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
@@ -3941,7 +3941,7 @@ async def get_shadowsocks_config(connection_id: str):
 async def get_user_devices(user_id: str):
     """Get all devices registered for a user"""
     try:
-        user = await db.users.find_one({"id": request.user_id})
+        user = await db.users.find_one({"id": user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
@@ -3988,7 +3988,7 @@ async def register_device(
 ):
     """Register a new device for a user"""
     try:
-        user = await db.users.find_one({"id": request.user_id})
+        user = await db.users.find_one({"id": user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
@@ -4045,7 +4045,7 @@ async def register_device(
 async def remove_device(user_id: str, device_id: str):
     """Remove a device from user's account"""
     try:
-        user = await db.users.find_one({"id": request.user_id})
+        user = await db.users.find_one({"id": user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
@@ -4096,7 +4096,7 @@ async def assign_dedicated_ip(user_id: str, server_id: str):
     """Assign a dedicated IP to a user (Ultimate plan only)"""
     try:
         # Check user plan
-        user = await db.users.find_one({"id": request.user_id})
+        user = await db.users.find_one({"id": user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
@@ -4291,7 +4291,7 @@ async def create_referral_code(user_id: str):
     """Create a referral code for a user"""
     try:
         # Check if user exists
-        user = await db.users.find_one({"id": request.user_id})
+        user = await db.users.find_one({"id": user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
@@ -4388,18 +4388,18 @@ async def register_affiliate(request: RegisterAffiliateRequest):
     """Register user as an affiliate partner"""
     try:
         # Check if user exists
-        user = await db.users.find_one({"id": request.user_id})
+        user = await db.users.find_one({"id": user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
         # Check if already an affiliate
-        existing = await db.affiliate_partners.find_one({"user_id": request.user_id})
+        existing = await db.affiliate_partners.find_one({"user_id": user_id})
         if existing:
             raise HTTPException(status_code=400, detail="User is already an affiliate partner")
         
         # Create affiliate partner
         affiliate = AffiliatePartner(
-            user_id=request.user_id,
+            user_id=user_id,
             payment_method=request.payment_method,
             payment_details=request.payment_details
         )
@@ -4409,7 +4409,7 @@ async def register_affiliate(request: RegisterAffiliateRequest):
         
         await db.affiliate_partners.insert_one(doc)
         
-        logger.info(f"Registered affiliate partner: {request.user_id}")
+        logger.info(f"Registered affiliate partner: {user_id}")
         
         return {
             "message": "Affiliate registration successful",
@@ -4542,7 +4542,7 @@ async def request_data_export(user_id: str):
     """Request GDPR data export"""
     try:
         # Check if user exists
-        user = await db.users.find_one({"id": request.user_id})
+        user = await db.users.find_one({"id": user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
@@ -4583,7 +4583,7 @@ async def request_data_deletion(user_id: str, confirm: bool = False):
             )
         
         # Check if user exists
-        user = await db.users.find_one({"id": request.user_id})
+        user = await db.users.find_one({"id": user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
@@ -4786,14 +4786,14 @@ async def create_support_ticket(request: CreateSupportTicketRequest):
     """Create a support ticket"""
     try:
         # Check user plan for priority support
-        user = await db.users.find_one({"id": request.user_id})
+        user = await db.users.find_one({"id": user_id})
         if user and user.get("current_plan_id"):
             plan = await db.tariff_plans.find_one({"id": user["current_plan_id"]})
             if plan and plan.get("name") == "Ultimate":
                 request.priority = "high"  # Ultimate plan gets priority support
         
         ticket = SupportTicket(
-            user_id=request.user_id,
+            user_id=user_id,
             subject=request.subject,
             description=request.description,
             priority=request.priority,
