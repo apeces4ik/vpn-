@@ -244,16 +244,20 @@ class ReferralProgram(BaseModel):
     """Referral tracking for user growth"""
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    referrer_id: str  # User who refers
+    user_id: str  # User who owns this referral code
+    referrer_id: Optional[str] = None  # Deprecated, kept for backward compatibility
     referred_id: Optional[str] = None  # User who was referred (filled when they sign up)
     referral_code: str = Field(default_factory=lambda: secrets.token_urlsafe(8))
     commission_rate: float = 0.20  # 20% commission
     total_earned: float = 0.0
+    total_referrals: int = 0  # Total successful referrals
     status: str = "active"  # active, completed, expired
     clicks: int = 0
     signups: int = 0
+    total_signups: int = 0  # Alias for signups for compatibility
     conversions: int = 0  # Paid subscriptions
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     expires_at: Optional[datetime] = None
 
 class DedicatedIP(BaseModel):
