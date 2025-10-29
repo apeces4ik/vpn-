@@ -1141,17 +1141,6 @@ async def refresh_free_vpngate_servers():
 
 
 @api_router.get("/servers/locations")
-            "vpngate_servers": vpngate_count,
-            "active_vpngate_servers": active_vpngate,
-            "top_countries": [{"country": c['_id'], "count": c['count']} for c in countries],
-            "source": "vpngate.net"
-        }
-        
-    except Exception as e:
-        logger.error(f"Error getting VPN Gate stats: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@api_router.get("/servers/locations")
 async def get_locations():
     servers = await db.vpn_servers.find({"is_active": True}, {"_id": 0, "location": 1, "country_code": 1}).to_list(100)
     locations = []
