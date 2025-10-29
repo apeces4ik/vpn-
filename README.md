@@ -205,7 +205,7 @@ REACT_APP_BACKEND_URL=https://your-backend-url.com/api
 - ...and 248 more via NOWPayments
 
 ## 📖 Documentation
-- [API Documentation](https://vpn-notification.preview.emergentagent.com/docs)
+- [API Documentation](https://gate-check.preview.emergentagent.com/docs)
 - [Payment Integration Guide](/docs/payments.md)
 - [VPN Protocol Setup](/docs/vpn-setup.md)
 
