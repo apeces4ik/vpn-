@@ -182,46 +182,25 @@ const SupportTickets = ({ user }) => {
             <DialogContent className="bg-gray-900 border-gray-700 backdrop-blur-xl max-w-2xl">
               <DialogHeader>
                 <DialogTitle className="text-2xl font-bold text-white">Create Support Ticket</DialogTitle>
-                <DialogDescription className="text-gray-400 text-base">Describe your issue and we'll help you resolve it quickly</DialogDescription>
+                <DialogDescription className="text-gray-400 text-base">Enter your Telegram username and we'll contact you</DialogDescription>
               </DialogHeader>
               <div className="space-y-5 mt-6">
                 <div>
-                  <Label htmlFor="subject" className="text-white font-semibold">Subject *</Label>
-                  <Input id="subject" placeholder="Brief description of the issue" value={newTicket.subject} onChange={(e) => setNewTicket({...newTicket, subject: e.target.value})} className="bg-gray-800 border-gray-600 text-white mt-2 h-12" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="category" className="text-white font-semibold">Category</Label>
-                    <Select value={newTicket.category} onValueChange={(value) => setNewTicket({...newTicket, category: value})}>
-                      <SelectTrigger className="bg-gray-800 border-gray-600 text-white mt-2 h-12"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-gray-800 border-gray-600">
-                        <SelectItem value="technical" className="text-white">🛠️ Technical Issue</SelectItem>
-                        <SelectItem value="billing" className="text-white">💳 Billing</SelectItem>
-                        <SelectItem value="account" className="text-white">👤 Account</SelectItem>
-                        <SelectItem value="feature_request" className="text-white">✨ Feature Request</SelectItem>
-                        <SelectItem value="other" className="text-white">💬 Other</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <Label htmlFor="telegram_username" className="text-white font-semibold">Telegram Username *</Label>
+                  <div className="relative mt-2">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg font-semibold">@</span>
+                    <Input 
+                      id="telegram_username" 
+                      placeholder="your_username" 
+                      value={newTicket.telegram_username} 
+                      onChange={(e) => setNewTicket({...newTicket, telegram_username: e.target.value.replace('@', '')})} 
+                      className="bg-gray-800 border-gray-600 text-white h-14 pl-10 text-lg" 
+                    />
                   </div>
-                  <div>
-                    <Label htmlFor="priority" className="text-white font-semibold">Priority</Label>
-                    <Select value={newTicket.priority} onValueChange={(value) => setNewTicket({...newTicket, priority: value})}>
-                      <SelectTrigger className="bg-gray-800 border-gray-600 text-white mt-2 h-12"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-gray-800 border-gray-600">
-                        <SelectItem value="low" className="text-white">🟢 Low</SelectItem>
-                        <SelectItem value="medium" className="text-white">🟡 Medium</SelectItem>
-                        <SelectItem value="high" className="text-white">🟠 High</SelectItem>
-                        <SelectItem value="urgent" className="text-white">🔴 Urgent</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <p className="text-gray-500 text-sm mt-2">We'll contact you via Telegram to help with your issue</p>
                 </div>
-                <div>
-                  <Label htmlFor="description" className="text-white font-semibold">Description *</Label>
-                  <Textarea id="description" placeholder="Detailed description of your issue..." value={newTicket.description} onChange={(e) => setNewTicket({...newTicket, description: e.target.value})} className="bg-gray-800 border-gray-600 text-white mt-2 min-h-[150px]" />
-                </div>
-                <Button onClick={handleCreateTicket} disabled={creating} className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 h-12 text-base font-semibold mt-6">
-                  {creating ? (<><Loader className="w-5 h-5 mr-2 animate-spin" />Creating...</>) : (<><Send className="w-5 h-5 mr-2" />Submit Ticket</>)}
+                <Button onClick={handleCreateTicket} disabled={creating} className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 h-14 text-base font-semibold mt-6">
+                  {creating ? (<><Loader className="w-5 h-5 mr-2 animate-spin" />Creating...</>) : (<><Send className="w-5 h-5 mr-2" />Submit Support Request</>)}
                 </Button>
               </div>
             </DialogContent>
