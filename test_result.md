@@ -1568,9 +1568,9 @@ backend:
 
   - task: "DMCA & Legal Notices"
     implemented: true
-    working: false
+    working: true
     file: "backend/server.py"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
     needs_retesting: false
     status_history:
@@ -1596,6 +1596,21 @@ backend:
           - POST endpoint expects query parameters instead of JSON body
           
           Status: Needs API parameter format fixes
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ DMCA & LEGAL NOTICES FULLY WORKING - REVIEW REQUEST COMPLETE
+          
+          Enterprise Endpoints Testing Results:
+          1. ✅ POST /api/legal/dmca-notice (JSON Body): Successfully accepts JSON body with complainant_name, complainant_email, content_description
+          2. ✅ GET /api/legal/dmca-notices: Working perfectly - returns notices array with proper structure
+          
+          FIXES APPLIED:
+          - POST endpoint now properly accepts JSON body instead of query parameters
+          - Fixed MongoDB ObjectId serialization issue in GET endpoint
+          - DMCA notice creation and retrieval working correctly
+          
+          Status: FULLY WORKING - All review request requirements met
 
   - task: "Security Audits Scheduling"
     implemented: true
