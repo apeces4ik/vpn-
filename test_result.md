@@ -1614,9 +1614,9 @@ backend:
 
   - task: "Security Audits Scheduling"
     implemented: true
-    working: false
+    working: true
     file: "backend/server.py"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
     needs_retesting: false
     status_history:
@@ -1642,6 +1642,21 @@ backend:
           - POST endpoint expects query parameters instead of JSON body
           
           Status: Needs API parameter format fixes
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ SECURITY AUDITS SCHEDULING FULLY WORKING - REVIEW REQUEST COMPLETE
+          
+          Enterprise Endpoints Testing Results:
+          1. ✅ POST /api/security/audits/schedule (JSON Body): Successfully accepts JSON body with audit_type, scheduled_date, auditor
+          2. ✅ GET /api/security/audits: Working perfectly - returns audits array with proper structure
+          
+          FIXES APPLIED:
+          - POST endpoint now properly accepts JSON body instead of query parameters
+          - Fixed MongoDB ObjectId serialization issue in GET endpoint
+          - Security audit scheduling and retrieval working correctly
+          
+          Status: FULLY WORKING - All review request requirements met
 
   - task: "Alerts System"
     implemented: true
