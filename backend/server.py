@@ -4560,7 +4560,7 @@ async def get_no_log_report(
             query.setdefault("timestamp", {})["$lte"] = end_date
         
         # Get audit logs
-        logs_cursor = db.audit_logs.find(query).sort("timestamp", -1).limit(1000)
+        logs_cursor = db.audit_logs.find(query, {"_id": 0}).sort("timestamp", -1).limit(1000)
         logs = await logs_cursor.to_list(length=1000)
         
         # Get policy verification count
