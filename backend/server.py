@@ -26,6 +26,9 @@ from vpn_config_generator import vpn_config_generator
 from email_service import email_service
 from telegram_service import telegram_service
 
+# Import VPN Gate parser
+from vpn_gate_parser import vpn_gate_parser
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
