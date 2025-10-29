@@ -539,6 +539,20 @@ class CreateAuditLogRequest(BaseModel):
     details: str
     auditor: Optional[str] = None
 
+class GDPRDataExportRequest(BaseModel):
+    """Request model for GDPR data export"""
+    user_id: str
+
+class GDPRDataDeletionRequest(BaseModel):
+    """Request model for GDPR data deletion"""
+    user_id: str
+    confirm: bool = False
+
+class AssignDedicatedIPRequest(BaseModel):
+    """Request model for assigning dedicated IP"""
+    user_id: str
+    server_id: str
+
 # ============= NOWPAYMENTS CLIENT =============
 
 class NOWPaymentsClient:
