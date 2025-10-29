@@ -125,10 +125,14 @@ class VPNGateParser:
             logger.debug(f"Error parsing server line: {e}")
             return None
     
-    def format_for_database(self, servers: List[Dict]) -> List[Dict]:
+    def format_for_database(self, servers: List[Dict], is_free: bool = False) -> List[Dict]:
         """
         Format parsed servers for database insertion
         Compatible with VPNServer model
+        
+        Args:
+            servers: List of parsed server data
+            is_free: Mark servers as free (for testing purposes)
         """
         formatted = []
         
@@ -149,6 +153,8 @@ class VPNGateParser:
                 'supports_tor': False,
                 'obfs4_port': None,
                 'tor_socks_port': None,
+                'is_free': is_free,  # Mark as free for testing
+                'server_type': 'test' if is_free else 'premium',
                 'created_at': datetime.now()
             })
         
