@@ -29,6 +29,9 @@ from telegram_service import telegram_service
 # Import VPN Gate parser
 from vpn_gate_parser import vpn_gate_parser
 
+# Import Proxy Manager for web-VPN
+from proxy_manager import proxy_manager
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
