@@ -50,9 +50,7 @@ const ReferralProgram = ({ user }) => {
   const createReferralCode = async () => {
     setCreating(true);
     try {
-      await axios.post(`${API}/referrals/create`, {
-        user_id: user.id
-      });
+      await axios.post(`${API}/referrals/create?user_id=${user.id}`);
       toast.success('Referral code created!');
       fetchReferralData();
     } catch (error) {
