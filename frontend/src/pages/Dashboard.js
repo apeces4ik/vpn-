@@ -314,37 +314,6 @@ const Dashboard = ({ user, logout }) => {
             gap: '16px'
           }}>
             <button
-              onClick={() => navigate('/devices')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '16px 20px',
-                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%)',
-                border: '2px solid rgba(59, 130, 246, 0.4)',
-                borderRadius: '12px',
-                color: 'white',
-                cursor: 'pointer',
-                transition: 'all 0.3s',
-                fontSize: '15px',
-                fontWeight: '600'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.3) 0%, rgba(37, 99, 235, 0.2) 100%)';
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 8px 20px rgba(59, 130, 246, 0.3)';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.background = 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.1) 100%)';
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              <Smartphone size={20} style={{ color: '#60A5FA' }} />
-              <span>My Devices</span>
-            </button>
-
-            <button
               onClick={() => navigate('/history')}
               style={{
                 display: 'flex',
