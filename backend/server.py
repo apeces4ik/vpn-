@@ -505,6 +505,7 @@ class ResolveSecurityIncidentRequest(BaseModel):
 class CreateSupportTicketRequest(BaseModel):
     """Request model for creating support ticket"""
     user_id: str
+    telegram_username: Optional[str] = None
     subject: str
     description: str
     priority: str = "normal"
