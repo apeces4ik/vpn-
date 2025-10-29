@@ -95,6 +95,9 @@ class VPNServer(BaseModel):
     tor_socks_port: Optional[int] = None  # e.g., 9050
     supports_double_vpn: bool = True
     obfs4_port: Optional[int] = None  # For obfs4 obfuscation
+    # Free server support
+    is_free: bool = False  # Free servers for testing
+    server_type: str = "premium"  # "premium", "test", "trial"
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class User(BaseModel):
