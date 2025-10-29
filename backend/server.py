@@ -1066,6 +1066,7 @@ async def get_vpngate_stats():
             "provider": "VPNGate",
             "is_active": True
         })
+        free_servers = await db.vpn_servers.count_documents({"is_free": True})
         
         # Get country distribution
         pipeline = [
@@ -1078,6 +1079,68 @@ async def get_vpngate_stats():
         
         return {
             "total_servers": total,
+            "vpngate_servers": vpngate_count,
+            "active_vpngate": active_vpngate,
+            "free_test_servers": free_servers,
+            "countries": countries
+        }
+    except Exception as e:
+        logger.error(f"Error getting VPN Gate stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/servers/vpngate/refresh-free")
+async def refresh_free_vpngate_servers():
+    """
+    Manually refresh the 2 free VPN Gate test servers
+    
+    🆓 Fetches 2 best VPN Gate servers and makes them free for everyone
+    """
+    try:
+        logger.info("🔄 Manually refreshing 2 free VPN Gate test servers...")
+        
+        # Fetch 2 best servers from VPN Gate
+        min_speed_bytes = int(5.0 * 1_000_000)  # 5 Mbps minimum
+        servers = await vpn_gate_parser.fetch_servers(limit=2, min_speed=min_speed_bytes)
+        
+        if not servers:
+            raise HTTPException(status_code=503, detail="Failed to fetch VPN Gate servers. Service may be unavailable.")
+        
+        # Format servers as free
+        formatted_servers = vpn_gate_parser.format_for_database(servers, is_free=True)
+        
+        # Delete old free servers
+        deleted = await db.vpn_servers.delete_many({"is_free": True})
+        logger.info(f"🗑️ Deleted {deleted.deleted_count} old free test servers")
+        
+        # Insert new free servers
+        inserted_count = 0
+        for server_data in formatted_servers:
+            server_data['created_at'] = server_data['created_at'].isoformat()
+            server_data.pop('_id', None)
+            await db.vpn_servers.insert_one(server_data)
+            logger.info(f"✅ Added FREE test server: {server_data['hostname']} ({server_data['location']})")
+            inserted_count += 1
+        
+        # Get the new servers for response
+        new_free_servers = await db.vpn_servers.find({"is_free": True}, {"_id": 0}).to_list(10)
+        
+        return {
+            "message": f"Successfully refreshed {inserted_count} free test servers",
+            "deleted_old": deleted.deleted_count,
+            "inserted_new": inserted_count,
+            "servers": new_free_servers,
+            "note": "🆓 These servers are FREE for everyone (no registration required)!"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error refreshing free VPN Gate servers: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to refresh free servers: {str(e)}")
+
+
+@api_router.get("/servers/locations")
             "vpngate_servers": vpngate_count,
             "active_vpngate_servers": active_vpngate,
             "top_countries": [{"country": c['_id'], "count": c['count']} for c in countries],
