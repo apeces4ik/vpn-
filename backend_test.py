@@ -2906,6 +2906,14 @@ async def main():
         # Test 6: Corporate Features Integration
         await tester.test_corporate_features_integration()
         
+        # ============= VPN GATE INTEGRATION TESTING =============
+        print("\n" + "="*60)
+        print("🌐 VPN GATE INTEGRATION TESTING - REVIEW REQUEST FOCUS")
+        print("="*60)
+        
+        # Test VPN Gate integration as requested
+        await tester.test_vpngate_integration()
+        
         # ============= REVIEW REQUEST TESTING =============
         print("\n" + "="*60)
         print("🎯 REVIEW REQUEST TESTING - CONNECTION HISTORY & REFERRAL STATS")
