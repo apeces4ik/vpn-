@@ -120,18 +120,33 @@ yarn start
 ## 📝 Environment Variables
 
 ### Backend (.env)
-```
+```bash
+# Database
 MONGO_URL=mongodb://localhost:27017
 DB_NAME=anonvpn
+
+# NOWPayments (Production)
 NOWPAYMENTS_API_KEY=your_key_here
 NOWPAYMENTS_IPN_SECRET=your_secret_here
 NOWPAYMENTS_SANDBOX_MODE=False
+
+# Email Notifications (SendGrid)
+SENDGRID_API_KEY=your_sendgrid_key
+SENDER_EMAIL=noreply@yourdomain.com
+
+# Telegram Notifications
+TELEGRAM_BOT_TOKEN=your_bot_token
+
+# Redis for Celery
+REDIS_URL=redis://localhost:6379/0
 ```
 
 ### Frontend (.env)
 ```
 REACT_APP_BACKEND_URL=https://your-backend-url.com/api
 ```
+
+📧 **See [EMAIL_TELEGRAM_SETUP.md](./EMAIL_TELEGRAM_SETUP.md) for detailed setup instructions**
 
 ## 🔐 Security Features
 - No-log policy (metadata only, no traffic logs)
