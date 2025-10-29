@@ -4786,6 +4786,88 @@ async def get_user_tickets(user_id: str):
         logger.error(f"Get user tickets error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ============= TELEGRAM NOTIFICATION SETTINGS =============
+
+@api_router.post("/admin/telegram/settings")
+async def configure_telegram_settings(
+    admin_chat_ids: List[str],
+    enabled: bool = True,
+    notify_new_tickets: bool = True,
+    notify_ticket_replies: bool = True,
+    notify_ticket_status_change: bool = True
+):
+    """Configure Telegram notification settings"""
+    try:
+        settings = await db.telegram_settings.find_one({})
+        
+        if settings:
+            # Update existing settings
+            await db.telegram_settings.update_one(
+                {"id": settings["id"]},
+                {"$set": {
+                    "admin_chat_ids": admin_chat_ids,
+                    "enabled": enabled,
+                    "notify_new_tickets": notify_new_tickets,
+                    "notify_ticket_replies": notify_ticket_replies,
+                    "notify_ticket_status_change": notify_ticket_status_change,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+            logger.info("Telegram settings updated")
+        else:
+            # Create new settings
+            new_settings = TelegramSettings(
+                admin_chat_ids=admin_chat_ids,
+                enabled=enabled,
+                notify_new_tickets=notify_new_tickets,
+                notify_ticket_replies=notify_ticket_replies,
+                notify_ticket_status_change=notify_ticket_status_change
+            )
+            doc = new_settings.model_dump()
+            doc['created_at'] = doc['created_at'].isoformat()
+            doc['updated_at'] = doc['updated_at'].isoformat()
+            await db.telegram_settings.insert_one(doc)
+            logger.info("Telegram settings created")
+        
+        return {
+            "message": "Telegram settings configured successfully",
+            "admin_chat_ids": admin_chat_ids,
+            "enabled": enabled
+        }
+    except Exception as e:
+        logger.error(f"Configure Telegram settings error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/telegram/settings")
+async def get_telegram_settings():
+    """Get current Telegram notification settings"""
+    try:
+        settings = await db.telegram_settings.find_one({}, {"_id": 0})
+        
+        if not settings:
+            return {
+                "configured": False,
+                "message": "Telegram notifications not configured"
+            }
+        
+        return {
+            "configured": True,
+            "settings": settings
+        }
+    except Exception as e:
+        logger.error(f"Get Telegram settings error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.post("/admin/telegram/test")
+async def test_telegram_connection(chat_id: str):
+    """Test Telegram bot connection"""
+    try:
+        result = telegram_service.test_connection(chat_id)
+        return result
+    except Exception as e:
+        logger.error(f"Test Telegram connection error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.get("/sla/metrics")
 async def get_sla_metrics(days: int = Query(default=30, le=365)):
     """Get SLA metrics for the specified period"""
