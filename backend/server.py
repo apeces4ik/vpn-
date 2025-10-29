@@ -4438,7 +4438,7 @@ async def request_data_export(request: GDPRDataExportRequest):
         
         # Create GDPR request
         gdpr_request = GDPRRequest(
-            user_id=user_id,
+            user_id=request.user_id,
             request_type="data_export",
             status="pending"
         )
@@ -4448,7 +4448,7 @@ async def request_data_export(request: GDPRDataExportRequest):
         
         await db.gdpr_requests.insert_one(doc)
         
-        logger.info(f"Data export requested for user: {user_id}")
+        logger.info(f"Data export requested for user: {request.user_id}")
         
         return {
             "message": "Data export request submitted successfully",
