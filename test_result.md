@@ -1946,7 +1946,7 @@ agent_communication:
       - Verify minimum amount checking works correctly
       - Test that error messages are user-friendly
       
-      Backend URL: https://gate-check.preview.emergentagent.com/api
+      Backend URL: https://oneclick-vpn-1.preview.emergentagent.com/api
       
       Please test payment creation with various cryptocurrencies and verify error handling.
   - agent: "testing"
@@ -2058,7 +2058,7 @@ agent_communication:
       - Test partner user creation and subscription management
       - Test white-label branding configuration
       
-      Backend URL: https://gate-check.preview.emergentagent.com/api
+      Backend URL: https://oneclick-vpn-1.preview.emergentagent.com/api
       
       Please test all corporate features endpoints.
   - agent: "testing"
@@ -2332,7 +2332,7 @@ agent_communication:
       - Alert management
       - Dedicated IP assignment
       
-      Backend URL: https://gate-check.preview.emergentagent.com/api
+      Backend URL: https://oneclick-vpn-1.preview.emergentagent.com/api
   - agent: "testing"
     message: |
       🎯 NEW ENDPOINTS TESTING COMPLETED - REVIEW REQUEST FULFILLED
@@ -2508,7 +2508,7 @@ agent_communication:
       - Verify server filtering by capabilities
       - Test split tunneling rule application
       
-      Backend URL: https://gate-check.preview.emergentagent.com/api  - agent: "testing"
+      Backend URL: https://oneclick-vpn-1.preview.emergentagent.com/api  - agent: "testing"
     message: |
       🎯 REVIEW REQUEST TESTING COMPLETED - CRITICAL ISSUES FIXED
       

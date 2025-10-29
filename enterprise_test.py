@@ -12,7 +12,7 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 
 # Backend URL from environment
-BACKEND_URL = "https://gate-check.preview.emergentagent.com/api"
+BACKEND_URL = "https://oneclick-vpn-1.preview.emergentagent.com/api"
 
 class EnterpriseEndpointsTester:
     def __init__(self):
