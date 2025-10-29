@@ -951,7 +951,8 @@ async def get_locations():
 @api_router.post("/users", response_model=User)
 async def create_user(
     email: Optional[EmailStr] = None,
-    wallet_address: Optional[str] = None
+    wallet_address: Optional[str] = None,
+    referral_code: Optional[str] = None
 ):
     # Check if user already exists with this wallet address
     if wallet_address:
@@ -975,6 +976,39 @@ async def create_user(
         doc['plan_expires_at'] = doc['plan_expires_at'].isoformat()
     
     await db.users.insert_one(doc)
+    
+    # Process referral code if provided
+    if referral_code:
+        try:
+            # Find referral program by code
+            referral = await db.referral_programs.find_one(
+                {"referral_code": referral_code, "status": "active"},
+                {"_id": 0}
+            )
+            
+            if referral:
+                # Track referral signup
+                await db.referral_programs.update_one(
+                    {"id": referral["id"]},
+                    {
+                        "$inc": {"total_signups": 1},
+                        "$set": {"updated_at": datetime.now(timezone.utc).isoformat()}
+                    }
+                )
+                
+                # Link user to referrer
+                await db.users.update_one(
+                    {"id": user.id},
+                    {"$set": {"referred_by": referral["user_id"]}}
+                )
+                
+                logger.info(f"User {user.id} signed up with referral code {referral_code}")
+            else:
+                logger.warning(f"Invalid or inactive referral code: {referral_code}")
+        except Exception as e:
+            logger.error(f"Error processing referral code: {str(e)}")
+            # Don't fail user creation if referral processing fails
+    
     return user
 
 @api_router.get("/users/{user_id}", response_model=User)
