@@ -4260,7 +4260,10 @@ async def create_referral_code(user_id: str):
         
         # Check if user already has an active referral code
         existing = await db.referral_programs.find_one({
-            "referrer_id": user_id,
+            "$or": [
+                {"user_id": user_id},
+                {"referrer_id": user_id}  # For backward compatibility
+            ],
             "status": "active"
         })
         
@@ -4272,10 +4275,11 @@ async def create_referral_code(user_id: str):
             }
         
         # Create new referral program entry
-        referral = ReferralProgram(referrer_id=user_id)
+        referral = ReferralProgram(user_id=user_id, referrer_id=user_id)
         
         doc = referral.model_dump()
         doc['created_at'] = doc['created_at'].isoformat()
+        doc['updated_at'] = doc['updated_at'].isoformat()
         if doc.get('expires_at'):
             doc['expires_at'] = doc['expires_at'].isoformat()
         
