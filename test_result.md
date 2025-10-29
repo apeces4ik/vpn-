@@ -1484,6 +1484,24 @@ backend:
           - GET SLA metrics returns data directly instead of wrapped structure
           
           Status: Needs API parameter format and response structure fixes
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ SLA & SUPPORT SYSTEM REVIEW REQUEST FIXES WORKING
+          
+          Review Request Testing Results:
+          1. ✅ Create Support Ticket with Telegram Username: Successfully created ticket with telegram_username field
+          2. ✅ Get Support Tickets: Fixed MongoDB ObjectId serialization issue - now returns proper JSON response
+          3. ✅ Telegram Username Field: Tickets properly include and return telegram_username field
+          4. ✅ All Required Fields: Tickets contain all expected fields (id, user_id, subject, description, priority, status, category, created_at, telegram_username)
+          
+          Fixes Applied:
+          - Fixed MongoDB ObjectId serialization error in GET /api/support/tickets/{user_id} by excluding _id field
+          - Support ticket creation with telegram_username working correctly
+          - Support ticket retrieval working correctly and includes telegram_username field
+          
+          Status: REVIEW REQUEST REQUIREMENTS FULLY MET
+          Note: Some other SLA endpoints may still need fixes but support ticket functionality is working
 
   - task: "DMCA & Legal Notices"
     implemented: true
