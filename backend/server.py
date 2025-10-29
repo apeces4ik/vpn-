@@ -1206,6 +1206,24 @@ async def payment_webhook(request: dict, background_tasks: BackgroundTasks):
                         }}
                     )
                     logger.info(f"User {payment['user_id']} plan activated until {expires_at}")
+                    
+                    # Send email confirmation
+                    user = await db.users.find_one({"id": payment['user_id']})
+                    if user and user.get('email'):
+                        background_tasks.add_task(
+                            email_service.send_payment_confirmation,
+                            user_email=user['email'],
+                            payment_data={
+                                'amount': payment['amount'],
+                                'currency': payment['currency'],
+                                'plan_name': tariff['name'],
+                                'payment_id': payment_id,
+                                'crypto_currency': payment['pay_currency'],
+                                'crypto_amount': payment.get('pay_amount', 0),
+                                'expires_at': expires_at.strftime('%Y-%m-%d')
+                            }
+                        )
+                        logger.info(f"Payment confirmation email queued for {user['email']}")
         
         return {"status": "ok"}
     
