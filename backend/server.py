@@ -834,19 +834,55 @@ async def init_tariffs():
 @api_router.get("/servers", response_model=List[VPNServer])
 async def get_servers(
     location: Optional[str] = None,
-    only_active: bool = True
+    only_active: bool = True,
+    include_free: bool = True,
+    only_free: bool = False
 ):
+    """
+    Get VPN servers list
+    
+    Args:
+        location: Filter by location
+        only_active: Only return active servers
+        include_free: Include free test servers in results
+        only_free: Return only free test servers
+    """
     query = {}
     if location:
         query['location'] = location
     if only_active:
         query['is_active'] = True
+    if only_free:
+        query['is_free'] = True
+    elif not include_free:
+        query['is_free'] = False
     
     servers = await db.vpn_servers.find(query, {"_id": 0}).to_list(100)
     for server in servers:
         if isinstance(server.get('created_at'), str):
             server['created_at'] = datetime.fromisoformat(server['created_at'])
     return servers
+
+
+@api_router.get("/servers/free")
+async def get_free_test_servers():
+    """
+    Get free VPN Gate test servers
+    
+    🆓 Free servers for testing (no registration required)
+    📍 2 community-powered servers from VPN Gate
+    """
+    servers = await db.vpn_servers.find({"is_free": True, "is_active": True}, {"_id": 0}).to_list(10)
+    for server in servers:
+        if isinstance(server.get('created_at'), str):
+            server['created_at'] = datetime.fromisoformat(server['created_at'])
+    
+    return {
+        "message": "Free test servers for everyone (no registration required)",
+        "total": len(servers),
+        "servers": servers,
+        "note": "These are community-powered VPN Gate servers. All features available!"
+    }
 
 @api_router.post("/servers/init")
 async def init_servers(force: bool = False):
