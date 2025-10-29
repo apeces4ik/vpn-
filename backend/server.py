@@ -4623,7 +4623,7 @@ async def get_security_incidents(
         if severity:
             query["severity"] = severity
         
-        incidents_cursor = db.security_incidents.find(query).sort("detected_at", -1).limit(limit)
+        incidents_cursor = db.security_incidents.find(query, {"_id": 0}).sort("detected_at", -1).limit(limit)
         incidents = await incidents_cursor.to_list(length=limit)
         
         return {
