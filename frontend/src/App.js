@@ -20,6 +20,7 @@ import ReferralProgram from './pages/ReferralProgram';
 import AffiliateDashboard from './pages/AffiliateDashboard';
 import SupportTickets from './pages/SupportTickets';
 import WhiteLabelBranding from './pages/WhiteLabelBranding';
+import WhiteLabelConfig from './pages/WhiteLabelConfig';
 import ServerMonitoringDashboard from './pages/ServerMonitoringDashboard';
 import SecurityDashboard from './pages/SecurityDashboard';
 
