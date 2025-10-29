@@ -1528,7 +1528,7 @@ async def get_all_users(skip: int = 0, limit: int = 100):
     }
 
 @api_router.get("/admin/server-metrics/{server_id}")
-async def get_server_metrics(server_id: str):
+async def get_admin_server_metrics(server_id: str):
     server = await db.vpn_servers.find_one({"id": server_id}, {"_id": 0})
     if not server:
         raise HTTPException(status_code=404, detail="Server not found")
