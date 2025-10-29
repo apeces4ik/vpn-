@@ -368,6 +368,19 @@ class SupportTicket(BaseModel):
     resolved_at: Optional[datetime] = None
     messages: List[Dict[str, Any]] = []
 
+class TelegramSettings(BaseModel):
+    """Telegram notification settings"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    organization_id: Optional[str] = None  # For organization-level settings
+    admin_chat_ids: List[str] = []  # List of Telegram chat IDs to receive notifications
+    enabled: bool = True
+    notify_new_tickets: bool = True
+    notify_ticket_replies: bool = True
+    notify_ticket_status_change: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 class SLAMetric(BaseModel):
     """Service Level Agreement metrics tracking"""
     model_config = ConfigDict(extra="ignore")
