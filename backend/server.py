@@ -4463,17 +4463,17 @@ async def request_data_export(request: GDPRDataExportRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.post("/gdpr/data-deletion")
-async def request_data_deletion(user_id: str, confirm: bool = False):
+async def request_data_deletion(request: GDPRDataDeletionRequest):
     """Request GDPR data deletion (account deletion)"""
     try:
-        if not confirm:
+        if not request.confirm:
             raise HTTPException(
                 status_code=400,
                 detail="Please confirm data deletion by setting confirm=true"
             )
         
         # Check if user exists
-        user = await db.users.find_one({"id": user_id})
+        user = await db.users.find_one({"id": request.user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
