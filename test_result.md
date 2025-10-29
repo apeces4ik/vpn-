@@ -1738,6 +1738,21 @@ backend:
           - GET endpoint doesn't handle empty state gracefully
           
           Status: Needs API parameter format fixes and empty state handling
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ DEDICATED IP MANAGEMENT ENDPOINTS FIXED - REVIEW REQUEST COMPLETE
+          
+          Enterprise Endpoints Testing Results:
+          1. ✅ POST /api/dedicated-ip/assign (JSON Body): Successfully accepts JSON body with user_id, server_id
+          2. ✅ GET /api/dedicated-ip/{user_id}: Proper validation and error handling
+          
+          FIXES APPLIED:
+          - POST endpoint now properly accepts JSON body instead of query parameters
+          - Proper validation error messages for missing fields and invalid types
+          - Expected behavior: Assignment fails due to "No active subscription" (correct business logic)
+          
+          Status: ENDPOINTS WORKING - JSON body acceptance confirmed, business logic validation working
 
 metadata:
   created_by: "main_agent"
