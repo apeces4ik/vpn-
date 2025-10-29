@@ -4428,11 +4428,11 @@ async def configure_saml_provider(request: CreateSAMLProviderRequest):
 # ============= GDPR COMPLIANCE =============
 
 @api_router.post("/gdpr/data-export")
-async def request_data_export(user_id: str):
+async def request_data_export(request: GDPRDataExportRequest):
     """Request GDPR data export"""
     try:
         # Check if user exists
-        user = await db.users.find_one({"id": user_id})
+        user = await db.users.find_one({"id": request.user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
