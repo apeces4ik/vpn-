@@ -164,6 +164,25 @@ const LandingPage = ({ user, createUser }) => {
             <span>Enterprise-Grade Privacy</span>
           </div>
           
+          {referralCode && (
+            <div className="referral-badge" style={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              padding: '12px 20px',
+              borderRadius: '25px',
+              marginTop: '10px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '14px',
+              fontWeight: '600',
+              animation: 'pulse 2s infinite'
+            }}>
+              <span>🎁</span>
+              <span>Special Referral Link Active!</span>
+            </div>
+          )}
+          
           <h1 className="hero-title" data-testid="hero-title">
             <TypingEffect 
               text="Your Privacy, Absolutely Anonymous" 
