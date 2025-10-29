@@ -4806,7 +4806,7 @@ async def get_dmca_notices(
         if status:
             query["status"] = status
         
-        notices_cursor = db.dmca_notices.find(query).sort("received_at", -1).limit(limit)
+        notices_cursor = db.dmca_notices.find(query, {"_id": 0}).sort("received_at", -1).limit(limit)
         notices = await notices_cursor.to_list(length=limit)
         
         return {
