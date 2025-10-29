@@ -3998,12 +3998,12 @@ async def assign_dedicated_ip(request: AssignDedicatedIPRequest):
             raise HTTPException(status_code=403, detail="Dedicated IP not available in your plan")
         
         # Check if user already has a dedicated IP
-        existing = await db.dedicated_ips.find_one({"user_id": user_id, "is_active": True})
+        existing = await db.dedicated_ips.find_one({"user_id": request.user_id, "is_active": True})
         if existing:
             raise HTTPException(status_code=400, detail="User already has a dedicated IP")
         
         # Get server
-        server = await db.vpn_servers.find_one({"id": server_id})
+        server = await db.vpn_servers.find_one({"id": request.server_id})
         if not server:
             raise HTTPException(status_code=404, detail="Server not found")
         
