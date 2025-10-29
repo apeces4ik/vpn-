@@ -4704,7 +4704,8 @@ async def get_user_tickets(user_id: str):
     """Get all support tickets for a user"""
     try:
         tickets_cursor = db.support_tickets.find(
-            {"user_id": user_id}
+            {"user_id": user_id},
+            {"_id": 0}  # Exclude MongoDB _id field
         ).sort("created_at", -1)
         
         tickets = await tickets_cursor.to_list(length=100)
