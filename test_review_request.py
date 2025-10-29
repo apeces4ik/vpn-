@@ -15,7 +15,7 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 
 # Backend URL from environment
-BACKEND_URL = "https://invite-debug.preview.emergentagent.com/api"
+BACKEND_URL = "https://privacyshield-19.preview.emergentagent.com/api"
 
 class ReviewRequestTester:
     def __init__(self):
