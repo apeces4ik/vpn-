@@ -5331,6 +5331,160 @@ async def acknowledge_alert(alert_id: str, acknowledged_by: str):
         logger.error(f"Acknowledge alert error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ============= WEB-VPN PROXY ENDPOINTS =============
+
+@api_router.get("/proxy/available")
+async def get_available_proxies():
+    """
+    Get list of available public proxies
+    🌐 Public SOCKS5/HTTP proxies for direct browser configuration
+    """
+    try:
+        proxies = await proxy_manager.get_available_proxies()
+        return {
+            "total": len(proxies),
+            "proxies": proxies,
+            "note": "Configure these proxies in your browser settings for instant VPN access"
+        }
+    except Exception as e:
+        logger.error(f"Error fetching proxies: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/proxy/quick-connect")
+async def quick_connect_proxy(
+    user_id: str = Query(..., description="User ID"),
+    server_id: str = Query(..., description="Server ID to connect to")
+):
+    """
+    🚀 Quick Connect - Establish VPN proxy connection
+    
+    Returns proxy configuration for browser setup
+    """
+    try:
+        logger.info(f"🔌 Quick Connect request from user {user_id} to server {server_id}")
+        
+        # Get server details
+        server = await db.vpn_servers.find_one({"id": server_id})
+        if not server:
+            raise HTTPException(status_code=404, detail="Server not found")
+        
+        if not server.get('is_active', True):
+            raise HTTPException(status_code=400, detail="Server is not active")
+        
+        # Get OpenVPN config if available
+        server_config = server.get('ovpn_config', '')
+        server_ip = server['ipv4_address']
+        
+        # Create connection
+        connection_id = str(uuid.uuid4())
+        result = await proxy_manager.create_connection(
+            user_id=user_id,
+            server_ip=server_ip,
+            server_config=server_config,
+            connection_id=connection_id
+        )
+        
+        # Get manual configuration instructions
+        instructions = proxy_manager.get_manual_config_instructions(
+            result['proxy_host'],
+            result['proxy_port']
+        )
+        
+        return {
+            "status": "success",
+            "connection": result,
+            "server": {
+                "location": server['location'],
+                "country_code": server['country_code'],
+                "ip": server_ip
+            },
+            "instructions": instructions,
+            "pac_url": result['pac_url'],
+            "message": "VPN proxy is ready! Configure your browser using the instructions below."
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Quick Connect error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Connection failed: {str(e)}")
+
+
+@api_router.post("/proxy/disconnect")
+async def disconnect_proxy(user_id: str = Query(..., description="User ID")):
+    """
+    Disconnect from VPN proxy
+    """
+    try:
+        result = await proxy_manager.disconnect_user(user_id)
+        return result
+    except Exception as e:
+        logger.error(f"Error disconnecting: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/proxy/status/{user_id}")
+async def get_proxy_status(user_id: str):
+    """
+    Get user's current proxy connection status
+    """
+    try:
+        status = proxy_manager.get_user_connection(user_id)
+        if not status:
+            return {"status": "not_connected", "message": "No active connection"}
+        return status
+    except Exception as e:
+        logger.error(f"Error getting status: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/proxy/pac/{connection_id}")
+async def get_pac_file(connection_id: str):
+    """
+    Get PAC (Proxy Auto-Config) file for automatic browser configuration
+    
+    Usage: Set this URL as your browser's automatic proxy configuration URL
+    """
+    try:
+        # Generate PAC file
+        pac_content = proxy_manager.generate_pac_file("localhost", 1080)
+        
+        return StreamingResponse(
+            io.BytesIO(pac_content.encode()),
+            media_type="application/x-ns-proxy-autoconfig",
+            headers={
+                "Content-Disposition": f"attachment; filename=vpn-proxy-{connection_id}.pac"
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error generating PAC file: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/proxy/test")
+async def test_proxy_connection():
+    """
+    Test endpoint to verify proxy is working
+    Returns your current IP address
+    """
+    try:
+        async with httpx.AsyncClient() as client:
+            # Get IP from external service
+            response = await client.get("https://api.ipify.org?format=json", timeout=10.0)
+            ip_data = response.json()
+            
+            return {
+                "your_ip": ip_data.get('ip'),
+                "message": "This is your current IP address. If proxy is active, this should be the VPN server IP.",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+    except Exception as e:
+        logger.error(f"Error testing connection: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Include router
 app.include_router(api_router)
 
