@@ -4013,9 +4013,9 @@ async def assign_dedicated_ip(request: AssignDedicatedIPRequest):
         
         # Create dedicated IP
         dedicated_ip = DedicatedIP(
-            user_id=user_id,
+            user_id=request.user_id,
             ip_address=ip_address,
-            server_id=server_id,
+            server_id=request.server_id,
             location=server["location"],
             expires_at=user.get("plan_expires_at")
         )
@@ -4028,7 +4028,7 @@ async def assign_dedicated_ip(request: AssignDedicatedIPRequest):
         
         await db.dedicated_ips.insert_one(doc)
         
-        logger.info(f"Assigned dedicated IP {ip_address} to user: {user_id}")
+        logger.info(f"Assigned dedicated IP {ip_address} to user: {request.user_id}")
         
         return {
             "message": "Dedicated IP assigned successfully",
