@@ -5273,6 +5273,37 @@ async def startup_db_init():
                 await db.tariff_plans.insert_one(doc)
             logger.info(f"✅ Initialized {len(default_tariffs)} tariff plans")
         
+        # Initialize free VPN Gate servers for testing
+        free_server_count = await db.vpn_servers.count_documents({"is_free": True})
+        if free_server_count < 2:
+            logger.info("🌐 Initializing 2 free VPN Gate servers for testing...")
+            try:
+                # Fetch 2 best servers from VPN Gate
+                min_speed_bytes = int(5.0 * 1_000_000)  # 5 Mbps minimum
+                servers = await vpn_gate_parser.fetch_servers(limit=2, min_speed=min_speed_bytes)
+                
+                if servers:
+                    # Format servers as free
+                    formatted_servers = vpn_gate_parser.format_for_database(servers, is_free=True)
+                    
+                    # Delete old free servers
+                    await db.vpn_servers.delete_many({"is_free": True})
+                    
+                    # Insert new free servers
+                    for server_data in formatted_servers:
+                        server_data['created_at'] = server_data['created_at'].isoformat()
+                        server_data.pop('_id', None)
+                        await db.vpn_servers.insert_one(server_data)
+                        logger.info(f"✅ Added FREE test server: {server_data['hostname']} ({server_data['location']})")
+                    
+                    logger.info(f"🎉 Successfully initialized {len(formatted_servers)} free test servers")
+                else:
+                    logger.warning("⚠️ Could not fetch VPN Gate servers. Will retry on next startup.")
+            except Exception as e:
+                logger.error(f"❌ Error initializing free VPN Gate servers: {str(e)}")
+        else:
+            logger.info(f"ℹ️ Free test servers already initialized ({free_server_count} servers)")
+        
         # Initialize VPN servers if none exist
         server_count = await db.vpn_servers.count_documents({})
         if server_count == 0:
