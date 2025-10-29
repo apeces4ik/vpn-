@@ -229,6 +229,14 @@ const SupportTickets = ({ user }) => {
                         <Badge className={getPriorityColor(ticket.priority)}>{ticket.priority}</Badge>
                         <Badge variant="outline" className="text-gray-300 border-gray-600">{ticket.category}</Badge>
                       </div>
+                      {ticket.telegram_username && (
+                        <div className="mb-2">
+                          <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/50 px-3 py-1">
+                            <MessageCircle className="w-4 h-4 mr-1" />
+                            @{ticket.telegram_username}
+                          </Badge>
+                        </div>
+                      )}
                       <CardDescription className="text-gray-400 text-base">{ticket.description}</CardDescription>
                     </div>
                     <Badge className={ticket.status === 'resolved' ? 'bg-green-500/20 text-green-300 border-green-500/50 px-4 py-2' : ticket.status === 'in_progress' ? 'bg-blue-500/20 text-blue-300 border-blue-500/50 px-4 py-2' : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50 px-4 py-2'}>
