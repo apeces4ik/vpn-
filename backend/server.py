@@ -942,6 +942,110 @@ async def init_servers(force: bool = False):
         }
     }
 
+@api_router.post("/servers/vpngate/fetch")
+async def fetch_vpngate_servers(
+    limit: int = Query(20, ge=5, le=50, description="Number of servers to fetch"),
+    min_speed_mbps: float = Query(1.0, ge=0.5, description="Minimum speed in Mbps"),
+    replace_existing: bool = Query(False, description="Replace all existing servers")
+):
+    """
+    Fetch free VPN servers from VPN Gate (vpngate.net)
+    
+    🌐 Community-powered VPN servers for demo/testing
+    ⚠️ These are public servers - may be slow and less secure
+    """
+    try:
+        logger.info(f"🔄 Fetching {limit} VPN Gate servers (min speed: {min_speed_mbps} Mbps)")
+        
+        # Fetch servers from VPN Gate
+        min_speed_bytes = int(min_speed_mbps * 1_000_000)
+        servers = await vpn_gate_parser.fetch_servers(limit=limit, min_speed=min_speed_bytes)
+        
+        if not servers:
+            raise HTTPException(status_code=503, detail="Failed to fetch VPN Gate servers. Service may be unavailable.")
+        
+        # Format for database
+        formatted_servers = vpn_gate_parser.format_for_database(servers)
+        
+        # Clear existing servers if requested
+        if replace_existing:
+            deleted = await db.vpn_servers.delete_many({})
+            logger.info(f"🗑️ Deleted {deleted.deleted_count} existing servers")
+        
+        # Insert new servers
+        inserted_count = 0
+        for server_data in formatted_servers:
+            # Check if server already exists
+            existing = await db.vpn_servers.find_one({"ipv4_address": server_data['ipv4_address']})
+            if not existing:
+                server_data['created_at'] = server_data['created_at'].isoformat()
+                await db.vpn_servers.insert_one(server_data)
+                inserted_count += 1
+            else:
+                logger.debug(f"Server {server_data['ipv4_address']} already exists, skipping")
+        
+        # Get stats
+        total_servers = await db.vpn_servers.count_documents({})
+        active_servers = await db.vpn_servers.count_documents({"is_active": True})
+        
+        return {
+            "message": f"Successfully fetched and added {inserted_count} VPN Gate servers",
+            "fetched": len(servers),
+            "inserted": inserted_count,
+            "total_servers_in_db": total_servers,
+            "active_servers": active_servers,
+            "source": "vpngate.net",
+            "servers": formatted_servers[:5],  # Return first 5 as preview
+            "note": "⚠️ These are community servers - may be slower and less secure than private servers"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error fetching VPN Gate servers: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch VPN Gate servers: {str(e)}")
+
+@api_router.get("/servers/vpngate/stats")
+async def get_vpngate_stats():
+    """Get statistics about VPN Gate servers in database"""
+    try:
+        total = await db.vpn_servers.count_documents({})
+        vpngate_count = await db.vpn_servers.count_documents({"features.source": "vpngate"})
+        active_vpngate = await db.vpn_servers.count_documents({
+            "features.source": "vpngate",
+            "is_active": True
+        })
+        
+        # Get country distribution
+        pipeline = [
+            {"$match": {"features.source": "vpngate"}},
+            {"$group": {"_id": "$country_code", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 10}
+        ]
+        countries = await db.vpn_servers.aggregate(pipeline).to_list(10)
+        
+        # Get average speed
+        pipeline_speed = [
+            {"$match": {"features.source": "vpngate"}},
+            {"$group": {"_id": None, "avg_speed": {"$avg": "$features.speed_mbps"}}}
+        ]
+        speed_result = await db.vpn_servers.aggregate(pipeline_speed).to_list(1)
+        avg_speed = round(speed_result[0]['avg_speed'], 2) if speed_result else 0
+        
+        return {
+            "total_servers": total,
+            "vpngate_servers": vpngate_count,
+            "active_vpngate_servers": active_vpngate,
+            "average_speed_mbps": avg_speed,
+            "top_countries": [{"country": c['_id'], "count": c['count']} for c in countries],
+            "source": "vpngate.net"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting VPN Gate stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.get("/servers/locations")
 async def get_locations():
     servers = await db.vpn_servers.find({"is_active": True}, {"_id": 0, "location": 1, "country_code": 1}).to_list(100)
