@@ -1239,6 +1239,22 @@ backend:
           - Response structure inconsistency between endpoints
           
           Status: Needs field name standardization
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ CONNECTION HISTORY & SESSION TRACKING FIXED AND WORKING
+          
+          Review Request Testing Results:
+          1. ✅ Get Connection History: Fixed - now returns 'connections' field instead of 'history'
+          2. ✅ Response Structure: All required fields present (total_count, connections, skip, limit)
+          3. ✅ Get Active Sessions: Working correctly - returns sessions array with count
+          4. ✅ Disconnect Session: Validation working - properly handles non-existent sessions
+          
+          Fixes Applied:
+          - Changed response field from 'history' to 'connections' in connection history endpoint
+          - Added missing fields: total_count, skip, limit to match expected structure
+          
+          Status: FULLY WORKING - All review request requirements met
 
   - task: "Referral Program & Affiliate System"
     implemented: true
