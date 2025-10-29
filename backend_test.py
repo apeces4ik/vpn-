@@ -2906,12 +2906,20 @@ async def main():
         # Test 6: Corporate Features Integration
         await tester.test_corporate_features_integration()
         
-        # ============= ENTERPRISE ENDPOINTS TESTING (Review Request) =============
+        # ============= REVIEW REQUEST TESTING =============
+        print("\n" + "="*60)
+        print("🎯 REVIEW REQUEST TESTING - CONNECTION HISTORY & REFERRAL STATS")
+        print("="*60)
+        
+        # Test the specific endpoints mentioned in the review request
+        await tester.test_review_request_endpoints()
+        
+        # ============= ENTERPRISE ENDPOINTS TESTING =============
         print("\n" + "="*60)
         print("🏢 ENTERPRISE ENDPOINTS TESTING - PHASE 4")
         print("="*60)
         
-        # Test all enterprise endpoints mentioned in the review request
+        # Test all enterprise endpoints
         await tester.test_connection_history_and_sessions()
         await tester.test_referral_program_and_affiliate()
         await tester.test_oauth2_and_saml()
