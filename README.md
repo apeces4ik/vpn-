@@ -49,6 +49,33 @@ Full-featured anonymous VPN service with cryptocurrency payments, multi-protocol
   - Full configuration generation
   - Mobile and desktop support
 
+### 🆕 January 2025 Updates
+
+- ✅ **Email Notifications (SendGrid)**:
+  - Payment confirmation emails with crypto details
+  - Subscription expiry warnings (7, 3, 1 days before)
+  - Subscription expired notifications
+  - Automated daily checks via Celery
+
+- ✅ **Telegram Bot Notifications**:
+  - Support ticket creation alerts for admins
+  - Ticket reply notifications
+  - Status change updates
+  - Multi-admin support with chat IDs
+  - Configurable notification types
+
+- ✅ **Automatic Referral Tracking**:
+  - Referral codes processed automatically on signup
+  - URL parameter detection (`?ref=CODE`)
+  - Referral link stored in localStorage
+  - Automatic linking of users to referrers
+
+- ✅ **White-Label Branding UI**:
+  - Custom logo and colors
+  - Real-time preview
+  - Organization-specific branding
+  - Custom domain support (backend ready)
+
 ## 📡 API Endpoints
 
 ### Analytics & Monitoring
