@@ -22,6 +22,10 @@ import io
 # Import VPN config generator
 from vpn_config_generator import vpn_config_generator
 
+# Import notification services
+from email_service import email_service
+from telegram_service import telegram_service
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
