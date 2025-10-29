@@ -108,8 +108,6 @@ function App() {
             path="/quick-connect" 
             element={user ? <QuickConnect user={user} /> : <Navigate to="/" replace />} 
           />
-          
-          {/* New UI Routes */
           <Route 
             path="/devices" 
             element={user ? <DeviceManagement user={user} /> : <Navigate to="/" replace />} 
