@@ -200,6 +200,46 @@ const Dashboard = ({ user, logout }) => {
       </nav>
 
       <div className="dashboard-container">
+        {/* Quick Connect VPN Banner */}
+        <div className="quick-connect-banner" onClick={() => navigate('/quick-connect')} 
+             style={{
+               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+               padding: '1.5rem 2rem',
+               borderRadius: '15px',
+               marginBottom: '1.5rem',
+               cursor: 'pointer',
+               boxShadow: '0 10px 30px rgba(102, 126, 234, 0.3)',
+               transition: 'all 0.3s ease',
+               display: 'flex',
+               alignItems: 'center',
+               justifyContent: 'space-between'
+             }}
+             onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+             onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', color: 'white' }}>
+            <div style={{ 
+              background: 'rgba(255, 255, 255, 0.2)', 
+              padding: '1rem', 
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Zap size={32} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '700' }}>
+                🚀 Быстрое подключение VPN
+              </h3>
+              <p style={{ margin: '0.25rem 0 0 0', opacity: 0.9 }}>
+                Подключайтесь к бесплатным VPN серверам одним кликом - IP адрес меняется реально!
+              </p>
+            </div>
+          </div>
+          <ArrowUpRight size={32} color="white" />
+        </div>
+
         {/* Connection Status */}
         <div className="connection-status-card" data-testid="connection-status">
           <div className={`status-indicator ${isConnected ? 'connected' : 'disconnected'}`}>
