@@ -45,9 +45,14 @@ function App() {
     setLoading(false);
   }, []);
 
-  const createUser = async (walletAddress = null, isWalletLogin = false) => {
+  const createUser = async (walletAddress = null, isWalletLogin = false, referralCode = null) => {
     try {
       const requestData = isWalletLogin ? { wallet_address: walletAddress } : { email: walletAddress };
+      
+      // Add referral code if provided
+      if (referralCode) {
+        requestData.referral_code = referralCode;
+      }
       
       const response = await axios.post(`${API}/users`, requestData);
       const userData = response.data;
