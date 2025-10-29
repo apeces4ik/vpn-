@@ -134,23 +134,16 @@ class VPNGateParser:
         
         for idx, server in enumerate(servers, 1):
             formatted.append({
-                'server_id': f"vpngate-{idx:03d}",
+                'id': f"vpngate-{idx:03d}",
                 'hostname': f"{server['hostname']}.vpngate.net",
                 'location': server['country_name'],
                 'country_code': server['country_code'],
                 'ipv4_address': server['ip'],
+                'provider': 'VPNGate',
                 'is_active': True,
-                'current_load': min(100, int((server['sessions'] / 50) * 100)),  # Estimate load
+                'current_connections': server['sessions'],
                 'max_capacity': 100,
-                'protocols': ['openvpn'],  # VPN Gate primarily supports OpenVPN
-                'features': {
-                    'speed_mbps': server['speed_mbps'],
-                    'ping_ms': server['ping'],
-                    'uptime_days': server['uptime_days'],
-                    'score': server['score'],
-                    'source': 'vpngate',
-                    'community': True
-                },
+                'protocols': ['OpenVPN'],  # VPN Gate primarily supports OpenVPN
                 'supports_double_vpn': False,  # Community servers don't support advanced features
                 'supports_obfuscation': False,
                 'supports_tor': False,
