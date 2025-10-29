@@ -4479,7 +4479,7 @@ async def request_data_deletion(request: GDPRDataDeletionRequest):
         
         # Create GDPR request
         gdpr_request = GDPRRequest(
-            user_id=user_id,
+            user_id=request.user_id,
             request_type="data_deletion",
             status="pending",
             notes="User requested account and data deletion"
@@ -4490,7 +4490,7 @@ async def request_data_deletion(request: GDPRDataDeletionRequest):
         
         await db.gdpr_requests.insert_one(doc)
         
-        logger.info(f"Data deletion requested for user: {user_id}")
+        logger.info(f"Data deletion requested for user: {request.user_id}")
         
         return {
             "message": "Data deletion request submitted successfully",
