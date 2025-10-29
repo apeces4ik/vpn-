@@ -1239,7 +1239,138 @@ class AnonVPNTester:
         else:
             self.log_test("Geography Analytics", False, "Failed to get geography data", data)
     
-    # ============= ENTERPRISE ENDPOINTS TESTING (Review Request) =============
+    # ============= SPECIFIC REVIEW REQUEST TESTING =============
+    
+    async def test_connection_history_endpoint(self):
+        """Test Connection History endpoint - Review Request Focus"""
+        print("\n📊 Testing Connection History Endpoint (Review Request)...")
+        
+        if not self.test_data.get('user_id'):
+            self.log_test("Connection History Endpoint", False, "No user_id available")
+            return
+        
+        user_id = self.test_data['user_id']
+        
+        # Test GET /api/users/{user_id}/connection-history
+        success, data = await self.make_request('GET', f'/users/{user_id}/connection-history')
+        
+        if success:
+            # Check if response has "connections" field (not "history")
+            if 'connections' in data:
+                connections = data['connections']
+                total_count = data.get('total_count', 0)
+                skip = data.get('skip', 0)
+                limit = data.get('limit', 50)
+                
+                self.log_test("Connection History - Response Structure", True, 
+                    f"✅ Returns 'connections' field with {len(connections)} items, total_count: {total_count}")
+                
+                # Verify response structure
+                required_fields = ['total_count', 'connections', 'skip', 'limit']
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if not missing_fields:
+                    self.log_test("Connection History - Required Fields", True, 
+                        f"All required fields present: {required_fields}")
+                else:
+                    self.log_test("Connection History - Required Fields", False, 
+                        f"Missing fields: {missing_fields}")
+                    
+            elif 'history' in data:
+                self.log_test("Connection History - Response Structure", False, 
+                    "❌ API returns 'history' field instead of 'connections' field")
+            else:
+                self.log_test("Connection History - Response Structure", False, 
+                    f"❌ API missing both 'connections' and 'history' fields. Response: {data}")
+        else:
+            self.log_test("Connection History Endpoint", False, 
+                f"Failed to get connection history: {data}")
+    
+    async def test_referral_stats_endpoint(self):
+        """Test Referral Stats endpoint - Review Request Focus"""
+        print("\n🤝 Testing Referral Stats Endpoint (Review Request)...")
+        
+        if not self.test_data.get('user_id'):
+            self.log_test("Referral Stats Endpoint", False, "No user_id available")
+            return
+        
+        user_id = self.test_data['user_id']
+        
+        # First create a referral code for the test user
+        print("    Creating referral code for test user...")
+        referral_data = {"user_id": user_id}
+        success, create_data = await self.make_request('POST', '/referrals/create', params=referral_data)
+        
+        if success and create_data.get('referral_code'):
+            referral_code = create_data['referral_code']
+            self.log_test("Create Referral Code", True, f"Created referral code: {referral_code}")
+            
+            # Now test GET /api/referrals/{user_id}/stats
+            success, data = await self.make_request('GET', f'/referrals/{user_id}/stats')
+            
+            if success:
+                # Check if response has "total_referrals" field
+                if 'total_referrals' in data:
+                    total_referrals = data.get('total_referrals', 0)
+                    total_earnings = data.get('total_earnings') or data.get('total_earned', 0)
+                    referral_code_resp = data.get('referral_code')
+                    clicks = data.get('clicks', 0)
+                    signups = data.get('signups', 0)
+                    conversions = data.get('conversions', 0)
+                    commission_rate = data.get('commission_rate', 0)
+                    status = data.get('status', 'unknown')
+                    
+                    self.log_test("Referral Stats - Response Structure", True, 
+                        f"✅ Returns 'total_referrals' field: {total_referrals}")
+                    
+                    # Verify all expected fields are present
+                    expected_fields = ['total_referrals', 'referral_code', 'clicks', 'signups', 'conversions', 'commission_rate', 'status']
+                    present_fields = []
+                    missing_fields = []
+                    
+                    for field in expected_fields:
+                        if field in data or (field == 'total_earnings' and 'total_earned' in data):
+                            present_fields.append(field)
+                        else:
+                            missing_fields.append(field)
+                    
+                    # Check for total_earnings or total_earned
+                    if 'total_earnings' in data or 'total_earned' in data:
+                        present_fields.append('total_earnings/total_earned')
+                    else:
+                        missing_fields.append('total_earnings/total_earned')
+                    
+                    if not missing_fields:
+                        self.log_test("Referral Stats - Required Fields", True, 
+                            f"All expected fields present: {present_fields}")
+                    else:
+                        self.log_test("Referral Stats - Required Fields", False, 
+                            f"Missing fields: {missing_fields}, Present: {present_fields}")
+                    
+                    # Log the actual values
+                    self.log_test("Referral Stats - Values", True, 
+                        f"Referrals: {total_referrals}, Earnings: ${total_earnings}, Code: {referral_code_resp}, Clicks: {clicks}")
+                        
+                else:
+                    self.log_test("Referral Stats - Response Structure", False, 
+                        f"❌ API missing 'total_referrals' field. Response keys: {list(data.keys())}")
+            else:
+                self.log_test("Referral Stats Endpoint", False, 
+                    f"Failed to get referral stats: {data}")
+        else:
+            self.log_test("Create Referral Code", False, 
+                f"Failed to create referral code: {create_data}")
+    
+    async def test_review_request_endpoints(self):
+        """Test the specific endpoints mentioned in the review request"""
+        print("\n🎯 REVIEW REQUEST TESTING - Connection History & Referral Stats")
+        print("=" * 70)
+        
+        await self.test_connection_history_endpoint()
+        await self.test_referral_stats_endpoint()
+        
+        print("\n" + "=" * 70)
+        print("🎯 REVIEW REQUEST TESTING COMPLETE")
     
     async def test_connection_history_and_sessions(self):
         """Test Connection History & Session Tracking endpoints"""
@@ -1250,16 +1381,6 @@ class AnonVPNTester:
             return
         
         user_id = self.test_data['user_id']
-        
-        # Test 1: GET /api/users/{user_id}/connection-history
-        success, data = await self.make_request('GET', f'/users/{user_id}/connection-history')
-        if success and 'connections' in data:
-            connections = data['connections']
-            total_connections = data.get('total_connections', 0)
-            self.log_test("Get Connection History", True, 
-                f"Found {total_connections} connection history records")
-        else:
-            self.log_test("Get Connection History", False, "Failed to get connection history", data)
         
         # Test 2: GET /api/users/{user_id}/active-sessions
         success, data = await self.make_request('GET', f'/users/{user_id}/active-sessions')
@@ -1301,26 +1422,6 @@ class AnonVPNTester:
             return
         
         user_id = self.test_data['user_id']
-        
-        # Test 1: POST /api/referrals/create
-        referral_data = {"user_id": user_id}
-        success, data = await self.make_request('POST', '/referrals/create', params=referral_data)
-        if success and data.get('referral_code'):
-            referral_code = data['referral_code']
-            self.test_data['referral_code'] = referral_code
-            self.log_test("Create Referral", True, f"Created referral code: {referral_code}")
-        else:
-            self.log_test("Create Referral", False, "Failed to create referral", data)
-        
-        # Test 2: GET /api/referrals/{user_id}/stats
-        success, data = await self.make_request('GET', f'/referrals/{user_id}/stats')
-        if success and 'total_referrals' in data:
-            total_referrals = data.get('total_referrals', 0)
-            total_earnings = data.get('total_earnings', 0)
-            self.log_test("Get Referral Stats", True, 
-                f"Referrals: {total_referrals}, Earnings: ${total_earnings}")
-        else:
-            self.log_test("Get Referral Stats", False, "Failed to get referral stats", data)
         
         # Test 3: POST /api/referrals/track-click
         if self.test_data.get('referral_code'):
