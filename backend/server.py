@@ -4708,7 +4708,7 @@ async def resolve_security_incident(
 # ============= SLA & SUPPORT SYSTEM =============
 
 @api_router.post("/support/tickets")
-async def create_support_ticket(request: CreateSupportTicketRequest):
+async def create_support_ticket(request: CreateSupportTicketRequest, background_tasks: BackgroundTasks):
     """Create a support ticket"""
     try:
         # Check user plan for priority support
@@ -4739,6 +4739,24 @@ async def create_support_ticket(request: CreateSupportTicketRequest):
         await db.support_tickets.insert_one(doc)
         
         logger.info(f"Support ticket created: {request.subject} (Telegram: @{request.telegram_username}) (Priority: {request.priority})")
+        
+        # Send Telegram notifications
+        telegram_settings = await db.telegram_settings.find_one({})
+        if telegram_settings and telegram_settings.get('enabled') and telegram_settings.get('notify_new_tickets'):
+            admin_chat_ids = telegram_settings.get('admin_chat_ids', [])
+            if admin_chat_ids:
+                background_tasks.add_task(
+                    telegram_service.notify_new_support_ticket,
+                    ticket_data={
+                        'id': doc['id'],
+                        'subject': request.subject,
+                        'priority': request.priority,
+                        'user_email': user.get('email', 'Unknown') if user else 'Unknown',
+                        'message': request.description
+                    },
+                    admin_chat_ids=admin_chat_ids
+                )
+                logger.info(f"Telegram notification queued for {len(admin_chat_ids)} admins")
         
         return {
             "message": "Support ticket created successfully",
