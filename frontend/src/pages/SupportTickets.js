@@ -39,10 +39,7 @@ const SupportTickets = ({ user }) => {
   const [openDialog, setOpenDialog] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newTicket, setNewTicket] = useState({
-    subject: '',
-    description: '',
-    priority: 'medium',
-    category: 'technical'
+    telegram_username: ''
   });
 
   useEffect(() => {
