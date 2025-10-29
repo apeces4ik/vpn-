@@ -3233,8 +3233,10 @@ async def get_user_connection_history(
         
         return {
             "user_id": user_id,
-            "total_sessions": len(history),
-            "history": history
+            "total_count": len(history),
+            "connections": history,
+            "skip": 0,
+            "limit": limit
         }
     except Exception as e:
         logger.error(f"Connection history error: {str(e)}")
