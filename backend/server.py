@@ -4852,7 +4852,7 @@ async def get_security_audits(status: Optional[str] = None):
         if status:
             query["status"] = status
         
-        audits_cursor = db.security_audits.find(query).sort("scheduled_date", -1)
+        audits_cursor = db.security_audits.find(query, {"_id": 0}).sort("scheduled_date", -1)
         audits = await audits_cursor.to_list(length=100)
         
         return {"audits": audits}
