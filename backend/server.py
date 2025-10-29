@@ -4509,12 +4509,13 @@ async def get_gdpr_requests(user_id: str):
     """Get GDPR requests for a user"""
     try:
         requests_cursor = db.gdpr_requests.find(
-            {"user_id": user_id}
+            {"user_id": user_id},
+            {"_id": 0}  # Exclude MongoDB _id field to avoid serialization issues
         ).sort("requested_at", -1)
         
         requests = await requests_cursor.to_list(length=100)
         
-        return {"requests": requests}
+        return {"requests": requests, "total": len(requests)}
     except Exception as e:
         logger.error(f"Get GDPR requests error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
