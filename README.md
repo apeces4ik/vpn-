@@ -98,6 +98,16 @@ Full-featured anonymous VPN service with cryptocurrency payments, multi-protocol
 - `GET /api/protocols` - List all supported VPN protocols (4 protocols)
 - `GET /api/connections/{connection_id}/config?protocol=shadowsocks` - Generate Shadowsocks config
 
+### Notifications & Alerts
+- `POST /api/admin/telegram/settings` - Configure Telegram notification settings
+- `GET /api/admin/telegram/settings` - Get current Telegram settings
+- `POST /api/admin/telegram/test` - Test Telegram bot connection
+- Background: Celery tasks for subscription expiry emails
+
+### White-Label
+- `PUT /api/organizations/{org_id}` - Update organization branding
+- Frontend: `/whitelabel` - Branding configuration UI
+
 ## 🔧 Tech Stack
 - **Backend**: FastAPI (Python)
 - **Frontend**: React
