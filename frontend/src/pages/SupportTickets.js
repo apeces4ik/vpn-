@@ -59,8 +59,8 @@ const SupportTickets = ({ user }) => {
   };
 
   const handleCreateTicket = async () => {
-    if (!newTicket.subject.trim() || !newTicket.description.trim()) {
-      toast.error('Please fill in all fields');
+    if (!newTicket.telegram_username.trim()) {
+      toast.error('Please enter your Telegram username');
       return;
     }
 
@@ -68,13 +68,14 @@ const SupportTickets = ({ user }) => {
     try {
       await axios.post(`${API}/support/tickets`, {
         user_id: user.id,
-        subject: newTicket.subject,
-        description: newTicket.description,
-        priority: newTicket.priority,
-        category: newTicket.category
+        telegram_username: newTicket.telegram_username,
+        subject: 'Support Request',
+        description: `Support request from Telegram user: @${newTicket.telegram_username}`,
+        priority: 'medium',
+        category: 'general'
       });
       toast.success('Support ticket created successfully');
-      setNewTicket({ subject: '', description: '', priority: 'medium', category: 'technical' });
+      setNewTicket({ telegram_username: '' });
       setOpenDialog(false);
       fetchTickets();
     } catch (error) {
