@@ -979,14 +979,26 @@ async def fetch_vpngate_servers(
             existing = await db.vpn_servers.find_one({"ipv4_address": server_data['ipv4_address']})
             if not existing:
                 server_data['created_at'] = server_data['created_at'].isoformat()
-                await db.vpn_servers.insert_one(server_data)
+                # Remove _id if exists to let MongoDB generate it
+                server_data.pop('_id', None)
+                result = await db.vpn_servers.insert_one(server_data)
                 inserted_count += 1
+                logger.info(f"✅ Inserted server: {server_data['hostname']} ({server_data['ipv4_address']})")
             else:
                 logger.debug(f"Server {server_data['ipv4_address']} already exists, skipping")
         
         # Get stats
         total_servers = await db.vpn_servers.count_documents({})
         active_servers = await db.vpn_servers.count_documents({"is_active": True})
+        
+        # Prepare response without MongoDB ObjectIds
+        servers_preview = []
+        for s in formatted_servers[:5]:
+            s_copy = s.copy()
+            s_copy.pop('_id', None)
+            if isinstance(s_copy.get('created_at'), datetime):
+                s_copy['created_at'] = s_copy['created_at'].isoformat()
+            servers_preview.append(s_copy)
         
         return {
             "message": f"Successfully fetched and added {inserted_count} VPN Gate servers",
@@ -995,7 +1007,7 @@ async def fetch_vpngate_servers(
             "total_servers_in_db": total_servers,
             "active_servers": active_servers,
             "source": "vpngate.net",
-            "servers": formatted_servers[:5],  # Return first 5 as preview
+            "servers_preview": servers_preview,
             "note": "⚠️ These are community servers - may be slower and less secure than private servers"
         }
         
