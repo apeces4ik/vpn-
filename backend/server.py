@@ -3345,6 +3345,7 @@ async def get_referral_stats(user_id: str):
         return {
             "referral_code": referral["referral_code"],
             "referral_link": f"https://anonvpn.com/signup?ref={referral['referral_code']}",
+            "total_referrals": len(referred_users),
             "clicks": referral.get("clicks", 0),
             "signups": referral.get("signups", 0),
             "conversions": referral.get("conversions", 0),
