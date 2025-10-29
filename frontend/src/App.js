@@ -11,6 +11,7 @@ import AdminPanel from './pages/AdminPanel';
 import TeamDashboard from './pages/TeamDashboard';
 import ServerMonitor from './components/ServerMonitor';
 import VPNProviderManager from './components/VPNProviderManager';
+import QuickConnect from './components/QuickConnect';
 // New UI Pages
 import DeviceManagement from './pages/DeviceManagement';
 import LoyaltyProgram from './pages/LoyaltyProgram';
