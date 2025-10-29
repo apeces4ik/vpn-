@@ -9,10 +9,21 @@ const LandingPage = ({ user, createUser }) => {
   const navigate = useNavigate();
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState('');
+  const [referralCode, setReferralCode] = useState(null);
 
   useEffect(() => {
     if (user) {
       navigate('/dashboard');
+    }
+    
+    // Check for referral code in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const refCode = urlParams.get('ref');
+    if (refCode) {
+      setReferralCode(refCode);
+      // Store in localStorage for later use
+      localStorage.setItem('referral_code', refCode);
+      console.log('Referral code detected:', refCode);
     }
   }, [user, navigate]);
 
@@ -34,8 +45,17 @@ const LandingPage = ({ user, createUser }) => {
 
       const walletAddress = accounts[0];
       
-      // Create user with wallet address
-      await createUser(walletAddress, true); // true indicates wallet login
+      // Get referral code from state or localStorage
+      const refCode = referralCode || localStorage.getItem('referral_code');
+      
+      // Create user with wallet address and referral code
+      await createUser(walletAddress, true, refCode); // true indicates wallet login
+      
+      // Clear referral code from localStorage after use
+      if (refCode) {
+        localStorage.removeItem('referral_code');
+      }
+      
       navigate('/dashboard');
     } catch (err) {
       console.error('Wallet connection error:', err);
