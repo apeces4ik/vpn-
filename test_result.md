@@ -1369,9 +1369,9 @@ backend:
 
   - task: "GDPR Compliance"
     implemented: true
-    working: false
+    working: true
     file: "backend/server.py"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
     needs_retesting: false
     status_history:
@@ -1400,6 +1400,22 @@ backend:
           - Likely database query or serialization issue
           
           Status: Critical - GET endpoint needs debugging
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ GDPR COMPLIANCE FULLY WORKING - REVIEW REQUEST COMPLETE
+          
+          Enterprise Endpoints Testing Results:
+          1. ✅ POST /api/gdpr/data-export (JSON Body): Successfully accepts JSON body instead of query params
+          2. ✅ POST /api/gdpr/data-deletion (JSON Body): Successfully accepts JSON body with confirm flag
+          3. ✅ GET /api/gdpr/requests/{user_id} (CRITICAL): NO MORE Internal Server Error - working perfectly
+          
+          CRITICAL FIX APPLIED:
+          - Fixed MongoDB ObjectId serialization issue in GET endpoint
+          - All POST endpoints now properly accept JSON body instead of query parameters
+          - GDPR GET endpoint returns proper JSON response with requests array
+          
+          Status: FULLY WORKING - All review request requirements met
 
   - task: "No-Log Audit System"
     implemented: true
