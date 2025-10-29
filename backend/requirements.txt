@@ -74,4 +74,4 @@ watchfiles==1.1.1
 celery==5.3.4
 redis==5.0.1
 sendgrid==6.9.7
-python-telegram-bot==20.0
+python-telegram-bot==21.0
