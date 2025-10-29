@@ -4897,7 +4897,7 @@ async def get_active_alerts(severity: Optional[str] = None):
         if severity:
             query["severity"] = severity
         
-        alerts_cursor = db.alerts.find(query).sort("created_at", -1)
+        alerts_cursor = db.alerts.find(query, {"_id": 0}).sort("created_at", -1)
         alerts = await alerts_cursor.to_list(length=100)
         
         return {
