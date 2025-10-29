@@ -4588,7 +4588,7 @@ async def create_security_incident(request: CreateSecurityIncidentRequest):
         return {
             "message": "Security incident created",
             "incident_id": doc["id"],
-            "severity": severity
+            "severity": request.severity
         }
     except Exception as e:
         logger.error(f"Create security incident error: {str(e)}")
