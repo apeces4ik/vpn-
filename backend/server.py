@@ -4789,14 +4789,15 @@ async def create_support_ticket(request: CreateSupportTicketRequest):
     """Create a support ticket"""
     try:
         # Check user plan for priority support
-        user = await db.users.find_one({"id": user_id})
+        user = await db.users.find_one({"id": request.user_id})
         if user and user.get("current_plan_id"):
             plan = await db.tariff_plans.find_one({"id": user["current_plan_id"]})
             if plan and plan.get("name") == "Ultimate":
                 request.priority = "high"  # Ultimate plan gets priority support
         
         ticket = SupportTicket(
-            user_id=user_id,
+            user_id=request.user_id,
+            telegram_username=request.telegram_username,
             subject=request.subject,
             description=request.description,
             priority=request.priority,
@@ -4814,12 +4815,12 @@ async def create_support_ticket(request: CreateSupportTicketRequest):
         
         await db.support_tickets.insert_one(doc)
         
-        logger.info(f"Support ticket created: {request.subject} (Priority: {request.priority})")
+        logger.info(f"Support ticket created: {request.subject} (Telegram: @{request.telegram_username}) (Priority: {request.priority})")
         
         return {
             "message": "Support ticket created successfully",
             "ticket_id": doc["id"],
-            "priority": priority
+            "priority": request.priority
         }
     except Exception as e:
         logger.error(f"Create support ticket error: {str(e)}")
