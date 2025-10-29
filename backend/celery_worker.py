@@ -286,6 +286,128 @@ def health_check():
     }
 
 
+@celery_app.task(name='celery_worker.check_expiring_subscriptions')
+def check_expiring_subscriptions():
+    """
+    Celery task to check expiring subscriptions and send email notifications
+    Runs daily via Celery Beat
+    """
+    logger.info('Starting expiring subscriptions check...')
+    
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    return loop.run_until_complete(_check_expiring_subscriptions_async())
+
+
+async def _check_expiring_subscriptions_async():
+    """Async implementation of expiring subscriptions check"""
+    try:
+        from email_service import email_service
+        from datetime import timedelta
+        
+        db = await get_db()
+        now = datetime.now(timezone.utc)
+        
+        # Check for subscriptions expiring in 7, 3, and 1 day(s)
+        warning_days = [7, 3, 1]
+        notifications_sent = 0
+        
+        for days in warning_days:
+            target_date = now + timedelta(days=days)
+            start_of_day = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_of_day = target_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+            
+            # Find users with subscriptions expiring on this date
+            users_cursor = db.users.find({
+                'current_plan_id': {'$exists': True, '$ne': None},
+                'plan_expires_at': {
+                    '$gte': start_of_day.isoformat(),
+                    '$lte': end_of_day.isoformat()
+                }
+            }, {'_id': 0})
+            
+            users = await users_cursor.to_list(1000)
+            logger.info(f'Found {len(users)} users with subscriptions expiring in {days} day(s)')
+            
+            for user in users:
+                user_email = user.get('email')
+                plan_id = user.get('current_plan_id')
+                
+                if not user_email:
+                    continue
+                
+                # Get plan name
+                plan = await db.tariff_plans.find_one({'id': plan_id}, {'_id': 0})
+                plan_name = plan.get('name', 'VPN Plan') if plan else 'VPN Plan'
+                
+                # Send warning email
+                success = email_service.send_subscription_expiry_warning(
+                    user_email=user_email,
+                    days_remaining=days,
+                    plan_name=plan_name
+                )
+                
+                if success:
+                    notifications_sent += 1
+                    logger.info(f'Expiry warning sent to {user_email} ({days} days remaining)')
+        
+        # Check for expired subscriptions (today or before)
+        expired_users_cursor = db.users.find({
+            'current_plan_id': {'$exists': True, '$ne': None},
+            'plan_expires_at': {'$lte': now.isoformat()}
+        }, {'_id': 0})
+        
+        expired_users = await expired_users_cursor.to_list(1000)
+        logger.info(f'Found {len(expired_users)} users with expired subscriptions')
+        
+        for user in expired_users:
+            user_email = user.get('email')
+            plan_id = user.get('current_plan_id')
+            
+            if not user_email:
+                continue
+            
+            # Get plan name
+            plan = await db.tariff_plans.find_one({'id': plan_id}, {'_id': 0})
+            plan_name = plan.get('name', 'VPN Plan') if plan else 'VPN Plan'
+            
+            # Send expired notification
+            success = email_service.send_subscription_expired(
+                user_email=user_email,
+                plan_name=plan_name
+            )
+            
+            if success:
+                notifications_sent += 1
+                logger.info(f'Expiry notification sent to {user_email}')
+            
+            # Deactivate subscription
+            await db.users.update_one(
+                {'id': user['id']},
+                {
+                    '$set': {
+                        'current_plan_id': None,
+                        'plan_expires_at': None,
+                        'updated_at': now.isoformat()
+                    }
+                }
+            )
+        
+        logger.info(f'Expiring subscriptions check completed: {notifications_sent} notifications sent')
+        return {
+            'notifications_sent': notifications_sent,
+            'expired_count': len(expired_users)
+        }
+        
+    except Exception as e:
+        logger.error(f'Error in expiring subscriptions check: {e}')
+        raise
+
+
 if __name__ == '__main__':
     # For testing purposes
     logger.info('Starting Celery worker for AnonVPN payment monitoring...')
