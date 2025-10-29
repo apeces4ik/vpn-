@@ -112,7 +112,10 @@ Full-featured anonymous VPN service with cryptocurrency payments, multi-protocol
 - **Backend**: FastAPI (Python)
 - **Frontend**: React
 - **Database**: MongoDB
-- **Payment**: NOWPayments API
+- **Payment**: NOWPayments API (Production)
+- **Email**: SendGrid
+- **Notifications**: Telegram Bot API
+- **Background Tasks**: Celery + Redis
 - **VPN Protocols**: WireGuard, OpenVPN, IKEv2, Shadowsocks
 
 ## 📊 Current Status
