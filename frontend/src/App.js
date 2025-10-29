@@ -104,8 +104,12 @@ function App() {
           <Route path="/team" element={<TeamDashboard />} />
           <Route path="/monitor" element={<ServerMonitor />} />
           <Route path="/vpn-providers" element={<VPNProviderManager />} />
+          <Route 
+            path="/quick-connect" 
+            element={user ? <QuickConnect user={user} /> : <Navigate to="/" replace />} 
+          />
           
-          {/* New UI Routes */}
+          {/* New UI Routes */
           <Route 
             path="/devices" 
             element={user ? <DeviceManagement user={user} /> : <Navigate to="/" replace />} 
