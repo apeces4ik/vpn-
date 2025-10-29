@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { 
   Shield, Power, Download, ChevronRight, Globe, 
   Zap, Activity, Clock, ArrowUpRight, MapPin, Settings,
-  Smartphone, Award, Wifi, Users, LifeBuoy, Server
+  Award, Wifi, Users, LifeBuoy, Server
 } from 'lucide-react';
 import './Dashboard.css';
 import AdvancedFeaturesModal from '../components/AdvancedFeaturesModal';
