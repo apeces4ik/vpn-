@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """
-Focused test for Review Request endpoints:
-1. Connection History Endpoint (GET /api/users/{user_id}/connection-history)
-2. Referral Stats Endpoint (GET /api/referrals/{user_id}/stats)
+Review Request Testing - Specific endpoints mentioned in the review request
+Tests the following fixes:
+1. Referral Code Creation Fix
+2. Support Ticket with Telegram Username
+3. Get Support Tickets
 """
 
 import asyncio
@@ -10,6 +12,7 @@ import aiohttp
 import json
 import sys
 from typing import Dict, Any, Optional
+from datetime import datetime
 
 # Backend URL from environment
 BACKEND_URL = "https://invite-debug.preview.emergentagent.com/api"
@@ -18,7 +21,11 @@ class ReviewRequestTester:
     def __init__(self):
         self.session = None
         self.test_results = {}
-        self.test_user_id = None
+        self.test_data = {
+            'user_id': None,
+            'referral_code': None,
+            'ticket_id': None
+        }
     
     async def __aenter__(self):
         self.session = aiohttp.ClientSession(
