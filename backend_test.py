@@ -1239,6 +1239,242 @@ class AnonVPNTester:
         else:
             self.log_test("Geography Analytics", False, "Failed to get geography data", data)
     
+    # ============= VPN GATE FREE SERVERS TESTING (REVIEW REQUEST) =============
+    
+    async def test_free_vpn_gate_implementation(self):
+        """Test Free VPN Gate server implementation as requested in review"""
+        print("\n🆓 Testing Free VPN Gate Server Implementation (Review Request)...")
+        
+        # Test 1: Free Servers Endpoint
+        await self.test_free_servers_endpoint()
+        
+        # Test 2: VPN Gate Stats with free servers count
+        await self.test_vpngate_stats_with_free_count()
+        
+        # Test 3: Server List with Filters
+        await self.test_server_list_filters()
+        
+        # Test 4: Connection to Free Server (without subscription)
+        await self.test_free_server_connection()
+        
+        # Test 5: Refresh Free Servers
+        await self.test_refresh_free_servers()
+    
+    async def test_free_servers_endpoint(self):
+        """Test GET /api/servers/free - Should return 2 free test servers"""
+        print("    Testing Free Servers Endpoint...")
+        
+        success, data = await self.make_request('GET', '/servers/free')
+        
+        if success:
+            servers = data.get('servers', [])
+            total = data.get('total', 0)
+            message = data.get('message', '')
+            
+            # Check if we have 2 free servers
+            if total == 2 and len(servers) == 2:
+                # Check server properties
+                first_server = servers[0]
+                is_free = first_server.get('is_free', False)
+                server_type = first_server.get('server_type', '')
+                
+                if is_free and server_type == "test":
+                    self.log_test("Free Servers Endpoint", True, 
+                        f"Found {total} free test servers with correct properties")
+                else:
+                    self.log_test("Free Servers Endpoint", False, 
+                        f"Server properties incorrect - is_free: {is_free}, server_type: {server_type}")
+            else:
+                self.log_test("Free Servers Endpoint", False, 
+                    f"Expected 2 free servers, got {total} (servers array: {len(servers)})")
+            
+            # Check message about no registration required
+            if "no registration" in message.lower():
+                self.log_test("Free Servers Message", True, 
+                    "Correct message about no registration required")
+            else:
+                self.log_test("Free Servers Message", False, 
+                    f"Missing 'no registration' message: {message}")
+        else:
+            self.log_test("Free Servers Endpoint", False, "Failed to get free servers", data)
+    
+    async def test_vpngate_stats_with_free_count(self):
+        """Test GET /api/servers/vpngate/stats - Should show free_test_servers count"""
+        print("    Testing VPN Gate Stats with Free Servers Count...")
+        
+        success, data = await self.make_request('GET', '/servers/vpngate/stats')
+        
+        if success:
+            free_test_servers = data.get('free_test_servers', 0)
+            total_servers = data.get('total_servers', 0)
+            
+            if free_test_servers == 2:
+                self.log_test("VPN Gate Stats - Free Count", True, 
+                    f"Correct free_test_servers count: {free_test_servers}")
+            else:
+                self.log_test("VPN Gate Stats - Free Count", False, 
+                    f"Expected 2 free_test_servers, got {free_test_servers}")
+            
+            # Check total VPN Gate servers count
+            vpngate_servers = data.get('vpngate_servers', 0)
+            if vpngate_servers > 0:
+                self.log_test("VPN Gate Stats - Total", True, 
+                    f"Total VPN Gate servers: {vpngate_servers}")
+            else:
+                self.log_test("VPN Gate Stats - Total", False, 
+                    f"No VPN Gate servers found: {vpngate_servers}")
+        else:
+            self.log_test("VPN Gate Stats", False, "Failed to get VPN Gate stats", data)
+    
+    async def test_server_list_filters(self):
+        """Test GET /api/servers with filter parameters"""
+        print("    Testing Server List with Filters...")
+        
+        # Test 1: only_free=true - should return only free servers
+        success, data = await self.make_request('GET', '/servers?only_free=true')
+        
+        if success and isinstance(data, list):
+            free_servers = [s for s in data if s.get('is_free', False)]
+            non_free_servers = [s for s in data if not s.get('is_free', False)]
+            
+            if len(non_free_servers) == 0 and len(free_servers) == len(data):
+                self.log_test("Server Filter - only_free=true", True, 
+                    f"Returned only free servers: {len(free_servers)}")
+            else:
+                self.log_test("Server Filter - only_free=true", False, 
+                    f"Mixed results - Free: {len(free_servers)}, Non-free: {len(non_free_servers)}")
+        else:
+            self.log_test("Server Filter - only_free=true", False, "Failed to get servers with only_free=true", data)
+        
+        # Test 2: include_free=true (default) - should include free servers
+        success, data = await self.make_request('GET', '/servers?include_free=true')
+        
+        if success and isinstance(data, list):
+            free_servers = [s for s in data if s.get('is_free', False)]
+            
+            if len(free_servers) >= 2:
+                self.log_test("Server Filter - include_free=true", True, 
+                    f"Includes free servers: {len(free_servers)} free out of {len(data)} total")
+            else:
+                self.log_test("Server Filter - include_free=true", False, 
+                    f"Expected at least 2 free servers, got {len(free_servers)}")
+        else:
+            self.log_test("Server Filter - include_free=true", False, "Failed to get servers with include_free=true", data)
+        
+        # Test 3: include_free=false - should exclude free servers
+        success, data = await self.make_request('GET', '/servers?include_free=false')
+        
+        if success and isinstance(data, list):
+            free_servers = [s for s in data if s.get('is_free', False)]
+            
+            if len(free_servers) == 0:
+                self.log_test("Server Filter - include_free=false", True, 
+                    f"Correctly excluded free servers: {len(data)} premium servers only")
+            else:
+                self.log_test("Server Filter - include_free=false", False, 
+                    f"Should exclude free servers, but found {len(free_servers)}")
+        else:
+            self.log_test("Server Filter - include_free=false", False, "Failed to get servers with include_free=false", data)
+    
+    async def test_free_server_connection(self):
+        """Test POST /api/connections/connect to free server WITHOUT subscription"""
+        print("    Testing Connection to Free Server (No Subscription Required)...")
+        
+        # First, get a free server
+        success, free_data = await self.make_request('GET', '/servers/free')
+        
+        if not success or not free_data.get('servers'):
+            self.log_test("Free Server Connection", False, "No free servers available for testing")
+            return
+        
+        free_server = free_data['servers'][0]
+        free_server_id = free_server['id']
+        
+        # Create a test user (without subscription)
+        user_data = {"email": "freetest@anonvpn.example"}
+        success, user = await self.make_request('POST', '/users', params=user_data)
+        
+        if not success or not user.get('id'):
+            self.log_test("Free Server Connection", False, "Failed to create test user")
+            return
+        
+        test_user_id = user['id']
+        
+        # Try to connect to free server WITHOUT subscription
+        connection_data = {
+            "user_id": test_user_id,
+            "server_id": free_server_id,
+            "device_name": "Free Test Device"
+        }
+        
+        success, data = await self.make_request('POST', '/connections/connect', params=connection_data)
+        
+        if success and data.get('id'):
+            connection_id = data['id']
+            message = data.get('message', '')
+            
+            # Check if message mentions FREE server
+            if "free" in message.lower():
+                self.log_test("Free Server Connection", True, 
+                    f"Successfully connected to free server: {connection_id}")
+                
+                # Store for potential config testing
+                self.test_data['free_connection_id'] = connection_id
+            else:
+                self.log_test("Free Server Connection", True, 
+                    f"Connected to free server (no FREE message): {connection_id}")
+        else:
+            error_msg = str(data).lower()
+            if "subscription" in error_msg or "plan" in error_msg:
+                self.log_test("Free Server Connection", False, 
+                    "Free server connection should work without subscription")
+            else:
+                self.log_test("Free Server Connection", False, 
+                    f"Unexpected error connecting to free server: {data}")
+    
+    async def test_refresh_free_servers(self):
+        """Test POST /api/servers/vpngate/refresh-free - Should fetch 2 new servers"""
+        print("    Testing Refresh Free Servers...")
+        
+        success, data = await self.make_request('POST', '/servers/vpngate/refresh-free')
+        
+        if success:
+            deleted_old = data.get('deleted_old', 0)
+            inserted_new = data.get('inserted_new', 0)
+            servers = data.get('servers', [])
+            message = data.get('message', '')
+            
+            if inserted_new == 2 and len(servers) == 2:
+                # Check server properties
+                first_server = servers[0]
+                is_free = first_server.get('is_free', False)
+                server_type = first_server.get('server_type', '')
+                
+                if is_free and server_type == "test":
+                    self.log_test("Refresh Free Servers", True, 
+                        f"Successfully refreshed {inserted_new} free servers (deleted {deleted_old} old)")
+                else:
+                    self.log_test("Refresh Free Servers", False, 
+                        f"New servers have wrong properties - is_free: {is_free}, server_type: {server_type}")
+            else:
+                self.log_test("Refresh Free Servers", False, 
+                    f"Expected 2 new servers, got {inserted_new} (servers array: {len(servers)})")
+            
+            # Check message about FREE servers
+            if "free" in message.lower():
+                self.log_test("Refresh Free Servers Message", True, 
+                    "Correct message about FREE servers")
+            else:
+                self.log_test("Refresh Free Servers Message", False, 
+                    f"Missing FREE message: {message}")
+        else:
+            error_msg = str(data)
+            if "unavailable" in error_msg.lower() or "503" in error_msg:
+                self.log_test("Refresh Free Servers", True, 
+                    "VPN Gate service unavailable (expected for external service)")
+            else:
+                self.log_test("Refresh Free Servers", False, f"Failed to refresh free servers: {data}")
+    
     # ============= VPN GATE INTEGRATION TESTING =============
     
     async def test_vpngate_integration(self):
