@@ -1010,34 +1010,25 @@ async def get_vpngate_stats():
     """Get statistics about VPN Gate servers in database"""
     try:
         total = await db.vpn_servers.count_documents({})
-        vpngate_count = await db.vpn_servers.count_documents({"features.source": "vpngate"})
+        vpngate_count = await db.vpn_servers.count_documents({"provider": "VPNGate"})
         active_vpngate = await db.vpn_servers.count_documents({
-            "features.source": "vpngate",
+            "provider": "VPNGate",
             "is_active": True
         })
         
         # Get country distribution
         pipeline = [
-            {"$match": {"features.source": "vpngate"}},
+            {"$match": {"provider": "VPNGate"}},
             {"$group": {"_id": "$country_code", "count": {"$sum": 1}}},
             {"$sort": {"count": -1}},
             {"$limit": 10}
         ]
         countries = await db.vpn_servers.aggregate(pipeline).to_list(10)
         
-        # Get average speed
-        pipeline_speed = [
-            {"$match": {"features.source": "vpngate"}},
-            {"$group": {"_id": None, "avg_speed": {"$avg": "$features.speed_mbps"}}}
-        ]
-        speed_result = await db.vpn_servers.aggregate(pipeline_speed).to_list(1)
-        avg_speed = round(speed_result[0]['avg_speed'], 2) if speed_result else 0
-        
         return {
             "total_servers": total,
             "vpngate_servers": vpngate_count,
             "active_vpngate_servers": active_vpngate,
-            "average_speed_mbps": avg_speed,
             "top_countries": [{"country": c['_id'], "count": c['count']} for c in countries],
             "source": "vpngate.net"
         }
