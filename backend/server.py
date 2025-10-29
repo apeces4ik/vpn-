@@ -4264,18 +4264,18 @@ async def register_affiliate(request: RegisterAffiliateRequest):
     """Register user as an affiliate partner"""
     try:
         # Check if user exists
-        user = await db.users.find_one({"id": user_id})
+        user = await db.users.find_one({"id": request.user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
         # Check if already an affiliate
-        existing = await db.affiliate_partners.find_one({"user_id": user_id})
+        existing = await db.affiliate_partners.find_one({"user_id": request.user_id})
         if existing:
             raise HTTPException(status_code=400, detail="User is already an affiliate partner")
         
         # Create affiliate partner
         affiliate = AffiliatePartner(
-            user_id=user_id,
+            user_id=request.user_id,
             payment_method=request.payment_method,
             payment_details=request.payment_details
         )
@@ -4285,7 +4285,7 @@ async def register_affiliate(request: RegisterAffiliateRequest):
         
         await db.affiliate_partners.insert_one(doc)
         
-        logger.info(f"Registered affiliate partner: {user_id}")
+        logger.info(f"Registered affiliate partner: {request.user_id}")
         
         return {
             "message": "Affiliate registration successful",
