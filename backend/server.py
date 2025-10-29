@@ -4194,7 +4194,7 @@ async def get_connection_history(
         
         return {
             "total_count": total_count,
-            "history": history,
+            "connections": history,  # Changed from "history" to "connections"
             "skip": skip,
             "limit": limit
         }
