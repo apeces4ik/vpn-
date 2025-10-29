@@ -1,0 +1,423 @@
+.quick-connect-container {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  color: white;
+}
+
+.quick-connect-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.quick-connect-header h2 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  opacity: 0.9;
+  margin: 0;
+}
+
+.ip-display {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  text-align: center;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.ip-label {
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.9;
+}
+
+.ip-address {
+  font-size: 2rem;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  margin: 1rem 0;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.refresh-ip-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 0.5rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.refresh-ip-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.connection-status {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 2rem;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 50px;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.connected .status-dot {
+  background: #4ade80;
+}
+
+.disconnected .status-dot {
+  background: #ef4444;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.server-selection {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.server-label {
+  display: block;
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+}
+
+.server-select {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.server-select:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.server-select:focus {
+  outline: none;
+  border-color: white;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+}
+
+.server-info {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+
+.server-info p {
+  margin: 0.5rem 0;
+  font-size: 0.95rem;
+}
+
+.server-info strong {
+  opacity: 0.8;
+}
+
+.action-buttons {
+  text-align: center;
+  margin: 2rem 0;
+}
+
+.connect-btn,
+.disconnect-btn {
+  padding: 1.25rem 3rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.connect-btn {
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+  color: white;
+}
+
+.connect-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.connect-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.disconnect-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
+.disconnect-btn:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.connection-details {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  padding: 2rem;
+  margin-top: 2rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.connection-details h3 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+}
+
+.proxy-config {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.config-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.config-item:last-child {
+  border-bottom: none;
+}
+
+.config-label {
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.config-value {
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.toggle-instructions-btn {
+  width: 100%;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.toggle-instructions-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.instructions-panel {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+
+.instructions-panel h4,
+.instructions-panel h5 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.browser-instructions {
+  margin-bottom: 2rem;
+}
+
+.browser-section {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.browser-section h5 {
+  margin-bottom: 0.75rem;
+  color: #fbbf24;
+}
+
+.browser-section ol {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.browser-section li {
+  margin: 0.5rem 0;
+  line-height: 1.6;
+}
+
+.browser-section code {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  color: #4ade80;
+}
+
+.pac-file-section {
+  text-align: center;
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.download-pac-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  margin: 1rem 0;
+}
+
+.download-pac-btn:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: scale(1.05);
+}
+
+.pac-note {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  margin: 0.5rem 0 0 0;
+}
+
+.important-note {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: rgba(239, 68, 68, 0.2);
+  border-left: 4px solid #ef4444;
+  border-radius: 8px;
+}
+
+.important-note h5 {
+  margin-top: 0;
+  color: #fca5a5;
+}
+
+.important-note ul {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.important-note li {
+  margin: 0.5rem 0;
+  line-height: 1.6;
+}
+
+.vpngate-attribution {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  text-align: center;
+  opacity: 0.8;
+}
+
+.vpngate-attribution a {
+  color: #4ade80;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.vpngate-attribution a:hover {
+  text-decoration: underline;
+}
+
+.loading-spinner {
+  text-align: center;
+  padding: 3rem;
+  font-size: 1.2rem;
+  animation: pulse 1.5s infinite;
+}
+
+@media (max-width: 768px) {
+  .quick-connect-container {
+    padding: 1.5rem;
+    margin: 1rem;
+  }
+
+  .quick-connect-header h2 {
+    font-size: 2rem;
+  }
+
+  .ip-address {
+    font-size: 1.5rem;
+  }
+
+  .connect-btn,
+  .disconnect-btn {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+  }
+
+  .config-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
