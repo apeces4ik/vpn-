@@ -3982,11 +3982,11 @@ async def remove_device(user_id: str, device_id: str):
 # ============= DEDICATED IP ENDPOINTS =============
 
 @api_router.post("/dedicated-ip/assign")
-async def assign_dedicated_ip(user_id: str, server_id: str):
+async def assign_dedicated_ip(request: AssignDedicatedIPRequest):
     """Assign a dedicated IP to a user (Ultimate plan only)"""
     try:
         # Check user plan
-        user = await db.users.find_one({"id": user_id})
+        user = await db.users.find_one({"id": request.user_id})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
