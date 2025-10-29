@@ -26,6 +26,10 @@ celery_app.conf.update(
             'task': 'celery_worker.monitor_pending_payments',
             'schedule': crontab(minute='*/2'),  # Every 2 minutes
         },
+        'check-expiring-subscriptions': {
+            'task': 'celery_worker.check_expiring_subscriptions',
+            'schedule': crontab(hour='9', minute='0'),  # Daily at 9:00 AM UTC
+        },
     },
 )
 
