@@ -4342,9 +4342,14 @@ async def get_referral_stats(user_id: str):
         if not referral:
             raise HTTPException(status_code=404, detail="No active referral program found")
         
+        # Calculate total referrals (signups + conversions)
+        total_referrals = referral.get("signups", 0) + referral.get("conversions", 0)
+        
         return {
             "referral_code": referral["referral_code"],
             "total_earned": referral.get("total_earned", 0.0),
+            "total_earnings": referral.get("total_earned", 0.0),  # Alias for compatibility
+            "total_referrals": total_referrals,  # Added for frontend
             "clicks": referral.get("clicks", 0),
             "signups": referral.get("signups", 0),
             "conversions": referral.get("conversions", 0),
