@@ -11,7 +11,7 @@ import sys
 from typing import Dict, Any, Optional
 
 # Backend URL from environment
-BACKEND_URL = "https://privacyshield-19.preview.emergentagent.com/api"
+BACKEND_URL = "https://vpn-project-tasks.preview.emergentagent.com/api"
 
 class AdvancedVPNTester:
     def __init__(self):
