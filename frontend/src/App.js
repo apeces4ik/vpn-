@@ -133,6 +133,10 @@ function App() {
             element={user ? <WhiteLabelBranding user={user} organizationId={user.organization_id} /> : <Navigate to="/" replace />} 
           />
           <Route 
+            path="/whitelabel" 
+            element={<WhiteLabelConfig />} 
+          />
+          <Route 
             path="/monitoring" 
             element={<ServerMonitoringDashboard />} 
           />
