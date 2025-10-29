@@ -1691,6 +1691,21 @@ backend:
           - Cannot test full workflow due to creation failure
           
           Status: Needs API parameter format fixes
+      - working: true
+        agent: "testing"
+        comment: |
+          ✅ ALERTS SYSTEM FULLY WORKING - REVIEW REQUEST COMPLETE
+          
+          Enterprise Endpoints Testing Results:
+          1. ✅ POST /api/alerts/create (JSON Body): Successfully accepts JSON body with alert_type, severity, title, message, source
+          2. ✅ GET /api/alerts/active: Working perfectly - returns active alerts array with proper structure
+          
+          FIXES APPLIED:
+          - POST endpoint now properly accepts JSON body instead of query parameters
+          - Fixed MongoDB ObjectId serialization issue in GET endpoint
+          - Alert creation and retrieval working correctly
+          
+          Status: FULLY WORKING - All review request requirements met
 
   - task: "Dedicated IP Management"
     implemented: true
