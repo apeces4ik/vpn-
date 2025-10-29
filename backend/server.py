@@ -2309,45 +2309,49 @@ async def create_advanced_connection(
 ):
     """Create an advanced VPN connection with special features"""
     
-    # Validate user
-    user = await db.users.find_one({"id": user_id}, {"_id": 0})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    # Check if user has active plan
-    if not user.get("current_plan_id"):
-        raise HTTPException(status_code=403, detail="No active VPN plan")
-    
-    # Get user's plan to check feature access
-    plan = await db.tariff_plans.find_one({"id": user.get("current_plan_id")}, {"_id": 0})
-    if not plan:
-        raise HTTPException(status_code=403, detail="Invalid VPN plan")
-    
-    special_features = plan.get("special_features", [])
-    
-    # Validate feature access
-    if enable_double_vpn and "double_vpn" not in special_features:
-        raise HTTPException(
-            status_code=403,
-            detail="Double VPN requires Pro or Ultimate plan"
-        )
-    
-    if enable_obfuscation and "obfuscation" not in special_features:
-        raise HTTPException(
-            status_code=403,
-            detail="Obfuscation requires Pro or Ultimate plan"
-        )
-    
-    if enable_tor and "tor_over_vpn" not in special_features:
-        raise HTTPException(
-            status_code=403,
-            detail="Tor-over-VPN requires Ultimate plan"
-        )
-    
-    # Validate servers
+    # Validate servers first
     server = await db.vpn_servers.find_one({"id": server_id, "is_active": True}, {"_id": 0})
     if not server:
         raise HTTPException(status_code=404, detail="Server not found or inactive")
+    
+    is_free_server = server.get('is_free', False)
+    
+    # For free servers, skip most subscription checks but still require user
+    if not is_free_server:
+        # Validate user
+        user = await db.users.find_one({"id": user_id}, {"_id": 0})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Check if user has active plan
+        if not user.get("current_plan_id"):
+            raise HTTPException(status_code=403, detail="No active VPN plan. Try our free test servers!")
+        
+        # Get user's plan to check feature access
+        plan = await db.tariff_plans.find_one({"id": user.get("current_plan_id")}, {"_id": 0})
+        if not plan:
+            raise HTTPException(status_code=403, detail="Invalid VPN plan")
+        
+        special_features = plan.get("special_features", [])
+        
+        # Validate feature access
+        if enable_double_vpn and "double_vpn" not in special_features:
+            raise HTTPException(
+                status_code=403,
+                detail="Double VPN requires Pro or Ultimate plan"
+            )
+        
+        if enable_obfuscation and "obfuscation" not in special_features:
+            raise HTTPException(
+                status_code=403,
+                detail="Obfuscation requires Pro or Ultimate plan"
+            )
+        
+        if enable_tor and "tor_over_vpn" not in special_features:
+            raise HTTPException(
+                status_code=403,
+                detail="Tor-over-VPN requires Ultimate plan"
+            )
     
     if enable_double_vpn:
         if not exit_server_id:
@@ -2399,9 +2403,13 @@ async def create_advanced_connection(
     if split_tunnel_rules:
         features_enabled.append(f"Split Tunneling ({len(split_tunnel_rules)} rules)")
     
+    message = f"Advanced connection created with: {', '.join(features_enabled) if features_enabled else 'standard features'}"
+    if is_free_server:
+        message += " (FREE test server - no subscription required!)"
+    
     return {
         "connection": connection.model_dump(),
-        "message": f"Advanced connection created with: {', '.join(features_enabled) if features_enabled else 'standard features'}",
+        "message": message,
         "config_url": f"/api/connections/{connection.id}/advanced-config"
     }
 
