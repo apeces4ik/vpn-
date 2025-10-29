@@ -1434,22 +1434,31 @@ async def payment_webhook(request: dict, background_tasks: BackgroundTasks):
 # Connection Routes
 @api_router.post("/connections/connect")
 async def connect_to_server(user_id: str, server_id: str, device_name: str):
-    # Check if user has active plan
-    user = await db.users.find_one({"id": user_id})
-    if not user or not user.get('current_plan_id'):
-        raise HTTPException(status_code=403, detail="No active subscription")
+    # Check if server is free (no subscription needed)
+    server = await db.vpn_servers.find_one({"id": server_id})
+    if not server:
+        raise HTTPException(status_code=404, detail="Server not found")
     
-    # Check plan expiration
-    if user.get('plan_expires_at'):
-        expires_at = datetime.fromisoformat(user['plan_expires_at']) if isinstance(user['plan_expires_at'], str) else user['plan_expires_at']
-        if expires_at < datetime.now(timezone.utc):
-            raise HTTPException(status_code=403, detail="Subscription expired")
+    is_free_server = server.get('is_free', False)
     
-    # Check device limit
-    tariff = await db.tariff_plans.find_one({"id": user['current_plan_id']})
-    active_connections = await db.connections.count_documents({"user_id": user_id, "is_active": True})
-    if active_connections >= tariff.get('device_limit', 5):
-        raise HTTPException(status_code=429, detail="Device limit reached")
+    # For free servers, skip subscription checks
+    if not is_free_server:
+        # Check if user has active plan
+        user = await db.users.find_one({"id": user_id})
+        if not user or not user.get('current_plan_id'):
+            raise HTTPException(status_code=403, detail="No active subscription. Try our free test servers!")
+        
+        # Check plan expiration
+        if user.get('plan_expires_at'):
+            expires_at = datetime.fromisoformat(user['plan_expires_at']) if isinstance(user['plan_expires_at'], str) else user['plan_expires_at']
+            if expires_at < datetime.now(timezone.utc):
+                raise HTTPException(status_code=403, detail="Subscription expired. Try our free test servers!")
+        
+        # Check device limit
+        tariff = await db.tariff_plans.find_one({"id": user['current_plan_id']})
+        active_connections = await db.connections.count_documents({"user_id": user_id, "is_active": True})
+        if active_connections >= tariff.get('device_limit', 5):
+            raise HTTPException(status_code=429, detail="Device limit reached")
     
     # Create connection
     connection = Connection(
@@ -1471,7 +1480,11 @@ async def connect_to_server(user_id: str, server_id: str, device_name: str):
         {"$inc": {"current_connections": 1}}
     )
     
-    return connection
+    connection_dict = connection.model_dump()
+    if is_free_server:
+        connection_dict['message'] = "Connected to FREE test server (no subscription required)!"
+    
+    return connection_dict
 
 @api_router.post("/connections/{connection_id}/disconnect")
 async def disconnect_from_server(connection_id: str):
